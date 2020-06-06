@@ -1,6 +1,7 @@
-const folder = ''
-const sessionid = ''
-const cookie = ''
+require('dotenv').config()
+const folder = process.env.amazon_folder
+const sessionid = process.env.amazon_session_id
+const cookie = process.env.amazon_cookie
 
 //=====================================================
 

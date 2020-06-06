@@ -1,3 +1,8 @@
+require('dotenv').config()
+const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
+
+//=====================================================
+
 //may want to invoke with something like:
 //for i in {01..06}; do node . "[parent]" "Disc$i"; done
 
@@ -9,8 +14,7 @@ const mkdir = util.promisify(fs.mkdir)
 
 const outputFolder = 'output/azure-blob-lists'
 
-let STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING
-let blobServiceClient = BlobServiceClient.fromConnectionString(STORAGE_CONNECTION_STRING)
+let blobServiceClient = BlobServiceClient.fromConnectionString(azureConnectionString)
 
 const containerName = "photos-backup";
 
