@@ -10,11 +10,10 @@ const margin = 16
 const gap = 13
 
 async function blend(inputFile) {
-	let inputPipeline = sharp(inputFile, { failOnError: false }).rotate()
-	let metadata = await inputPipeline.clone().metadata()
+	let inputBuffer = await sharp(inputFile, { failOnError: false }).rotate().withMetadata().toBuffer();
+	let metadata = await sharp(inputBuffer).metadata()
 	let portrait = (metadata.height / metadata.width) > (height / width)//if landscape but the letterboxes will still be left and right then treat as portrait
-	let backgroundPipeline = inputPipeline
-	.clone()
+	let backgroundPipeline = sharp(inputBuffer)
 	.blur(40)
 	.resize({
 		width: width,
@@ -32,10 +31,7 @@ async function blend(inputFile) {
 	} else {
 		foregroundResizeOptions.width = width
 	}
-	let foregroundPipeline = inputPipeline
-	.clone()
-	.resize(foregroundResizeOptions)
-	.toBuffer()
+	let foregroundPipeline = sharp(inputBuffer).resize(foregroundResizeOptions).toBuffer()
 
 	let [background, foregroundBuffer] = await Promise.all([backgroundPipeline, foregroundPipeline])
 	

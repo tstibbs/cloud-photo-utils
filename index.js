@@ -24,7 +24,7 @@ async function run() {
 
     let idsToDownload = pathsInCloud.map(path => pathsToIds[path])
     await download(idsToDownload)
-    let pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`)
+    pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`)
     for (path of pathsInCloud) {
         console.log(`Converting ${path}`)
         await converter.blend(path)
