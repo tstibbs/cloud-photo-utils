@@ -18,8 +18,8 @@ function buildOneImage(text, fontSize) {
 }
 
 function buildImage(date, locationDescriptor) {
-    let top = buildOneImage(date, dataTextSize)
-    let bottom = buildOneImage(locationDescriptor, locationTextSize)
+    let top = date == null ? null : buildOneImage(date, dataTextSize)
+    let bottom = locationDescriptor == null ? null : buildOneImage(locationDescriptor, locationTextSize)
     return {
         top,
         bottom

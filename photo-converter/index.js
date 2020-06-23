@@ -42,35 +42,45 @@ async function blend(inputFile) {
 	let overlays = await textOverlay.buildOverlays(inputFile)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
-
-    let topMetadata = await sharp(topOverlay).metadata()
-    let bottomMetadata = await sharp(bottomOverlay).metadata()
-    let topHeight = topMetadata.height
-    let bottomHeight = bottomMetadata.height
-
-	let outputPipeline = background.composite([
+	let bottomHeight = null
+	
+	let compositions = [
 		//first put the resized image over the blured background	
 		{
 			input: foregroundBuffer,
 			blend: 'over'
-		},
-		//then add the location information
-		{
+		}
+	]
+	//then add the location information
+	if (bottomOverlay != null) {
+		let bottomMetadata = await sharp(bottomOverlay).metadata()
+		bottomHeight = bottomMetadata.height
+		compositions.push({
 			input: bottomOverlay,
 			blend: 'over',
 			gravity: 'southwest',
-			left: 16,
+			left: margin,
 			top: height - (margin + bottomHeight)
-		},
-		//then add the date
-		{
+		})
+	}
+	//then add the date
+	if (topOverlay != null) {
+		let topMetadata = await sharp(topOverlay).metadata()
+		let topHeight = topMetadata.height
+		let topMargin = margin + topHeight
+		if (bottomHeight != null) {
+			topMargin = topMargin + gap + bottomHeight
+		}
+		compositions.push({
 			input: topOverlay,
 			blend: 'over',
 			gravity: 'southwest',
-			left: 16,
-			top: height - (margin + bottomHeight + gap + topHeight)
-		}
-	])
+			left: margin,
+			top: height - topMargin
+		})
+	}
+
+	let outputPipeline = background.composite(compositions)
 	let outputFile = inputFile.replace(/(\/|\\|:)/g, '__')
 	let info = await outputPipeline.toFile(`output/converted-photos/blended-${outputFile}`)
 	console.log(info)
