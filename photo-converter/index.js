@@ -6,7 +6,7 @@ const width = 1920
 const height = 1080
 
 async function blend(inputFile) {
-	let inputPipeline = await sharp(`photo-converter/test-resources/${inputFile}`).rotate()
+	let inputPipeline = await sharp(inputFile, { failOnError: false }).rotate()
 	let metadata = await inputPipeline.clone().metadata()
 	let portrait = (metadata.height / metadata.width) > (height / width)//if landscape but the letterboxes will still be left and right then treat as portrait
 	let backgroundPipeline = inputPipeline
@@ -38,16 +38,20 @@ async function blend(inputFile) {
 		input: foregroundBuffer,
 		blend: 'over'
 	}])
-	let info = await outputPipeline.toFile(`output/converted-photos/blended-${inputFile}`)
+	let outputFile = inputFile.replace(/(\/|\\|:)/g, '__')
+	let info = await outputPipeline.toFile(`output/converted-photos/blended-${outputFile}`)
 	console.log(info)
 }
 
-async function main() {
-	try {
-		await blend('input-04-landscape.jpg')
-	} catch (err) {
-		console.error(err)
+if (!module.parent) { //i.e. if being invoked directly on the command line
+	async function main() {
+		try {
+			await blend('input-04-landscape.jpg')
+		} catch (err) {
+			console.error(err)
+		}
 	}
+	main()
 }
 
-main()
+module.exports = blend

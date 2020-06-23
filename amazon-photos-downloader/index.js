@@ -50,10 +50,8 @@ async function request(url) {
 	let response = await axiosInstance.get(url)
 	return response.data
 }
-
-let allFolders = {}
 	
-async function fetchParentFolders(ids) {
+async function fetchParentFolders(allFolders, ids) {
 	let parentFolderUrls = ids.map(folder => `nodes/${folder}`)
 
 	let parentsToRequest = []
@@ -77,12 +75,12 @@ async function fetchParentFolders(ids) {
 	})
 	
 	if (parentsToRequest.length > 0) {
-		await fetchParentFolders(parentsToRequest)
+		await fetchParentFolders(allFolders, parentsToRequest)
 	}
 	
 }
 
-function calcFolders() {
+function calcFolders(allFolders) {
 	let entriesToBeFilled = Object.values(allFolders)
 	.filter(folder =>
 		folder.parent != undefined
@@ -100,13 +98,11 @@ function calcFolders() {
 				otherFolder.parent = undefined
 			})
 		)
-		calcFolders()
+		calcFolders(allFolders)
 	}
 }
 
-function calcPaths(files) {
-	calcFolders()
-
+function calcPaths(allFolders, files) {
 	allFolders = Object.fromEntries(Object.entries(allFolders)
 	.map(([id, folder]) => [id, folder.name]))
 		
@@ -121,12 +117,23 @@ function calcPaths(files) {
 	return paths
 }
 
-async function main() {
+async function download() {
 	let filesData = await fetchPages(`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`, null)
 	let files = processFilesData(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
-	await fetchParentFolders(parentFolders)
-	let paths = calcPaths(files)
-	console.log([...new Set(paths)].sort().join('\n'))
+	let allFolders = {}
+	await fetchParentFolders(allFolders, parentFolders)
+	calcFolders(allFolders)
+	let paths = calcPaths(allFolders, files)
+	return[...new Set(paths)].sort()
 }
-main()
+
+if (!module.parent) { //i.e. if being invoked directly on the command line
+	download().then(paths => {
+		console.log(paths.join('\n'))
+	})
+}
+
+module.exports = {
+	download
+}
