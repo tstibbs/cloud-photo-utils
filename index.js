@@ -15,10 +15,10 @@ async function run() {
     let paths = await download()
     let pathsOnDisk = paths.filter(path => !path.startsWith('/Pictures/'))
     let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))//TODO download these
-    pathsOnDisk.map(path => path.replace(/^\/Backup\//, diskPath))
-    for (path of paths) {
+    pathsOnDisk = pathsOnDisk.map(path => path.replace(/^\/Backup\//, diskPath))
+    for (path of pathsOnDisk) {
         console.log(`Converting ${path}`)
-        await converter(path)
+        await converter.blend(path)
     }
 
     let outputDir = 'output/converted-photos/'
@@ -27,4 +27,14 @@ async function run() {
         await upload(outputDir + path)
     }
 }
-run()
+
+async function main() {
+    try {
+        await run()
+    } catch (e) {
+        console.error(e)
+    }
+    await converter.close()
+}
+
+main()
