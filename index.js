@@ -7,16 +7,25 @@ const fs = require('fs')
 const util = require('util')
 const readdir = util.promisify(fs.readdir)
 
-const {download} = require('./amazon-photos-downloader')
+const {listPaths, download} = require('./amazon-photos-downloader')
 const converter = require('./photo-converter')
 const {upload} = require('./google-photos-uploader')
 
 async function run() {
-    let paths = await download()
+    let pathsToIds = await listPaths()
+    let paths = [...new Set(Object.keys(pathsToIds))].sort()
     let pathsOnDisk = paths.filter(path => !path.startsWith('/Pictures/'))
-    let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))//TODO download these
+    let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))
     pathsOnDisk = pathsOnDisk.map(path => path.replace(/^\/Backup\//, diskPath))
     for (path of pathsOnDisk) {
+        console.log(`Converting ${path}`)
+        await converter.blend(path)
+    }
+
+    let idsToDownload = pathsInCloud.map(path => pathsToIds[path])
+    await download(idsToDownload)
+    let pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`)
+    for (path of pathsInCloud) {
         console.log(`Converting ${path}`)
         await converter.blend(path)
     }

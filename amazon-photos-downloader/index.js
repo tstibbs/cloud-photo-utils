@@ -7,6 +7,9 @@ const cookie = process.env.amazon_cookie
 
 const assert = require('assert')
 const axios = require('axios')
+const fs = require('fs')
+const util = require('util')
+const writeFile = util.promisify(fs.writeFile)
 
 const axiosInstance = axios.create({
 	baseURL: 'https://www.amazon.co.uk/drive/v1/',
@@ -32,12 +35,12 @@ async function fetchPages(url, startToken) {
 }
 
 function processFilesData(data) {
-	console.log(data.filter(item => item != undefined).length)
 	let files = data
 	.filter(item => item != undefined)
 	.map(item => {
 		assert(item.parentMap.FOLDER.length == 1)
 		return {
+			id: item.id,
 			name: item.name,
 			md5: item.contentProperties.md5,
 			folder: item.parentMap.FOLDER[0]
@@ -46,8 +49,8 @@ function processFilesData(data) {
 	return files
 }
 
-async function request(url) {
-	let response = await axiosInstance.get(url)
+async function request(url, options) {
+	let response = await axiosInstance.get(url, options)
 	return response.data
 }
 	
@@ -58,7 +61,6 @@ async function fetchParentFolders(allFolders, ids) {
 	let promises = parentFolderUrls.map(url => request(url))
 	let results = await Promise.all(promises)
 	results.forEach(result => {
-		//console.log(result)
 		assert(result.parents.length <= 1)
 		let parent = result.parents[0]
 		if (parent != null) {
@@ -112,12 +114,12 @@ function calcPaths(allFolders, files) {
 			folder = allFolders[folder]
 			file.name = `${folder}/${file.name}`
 		}
-		return file.name
+		return [file.name, file.id]
 	})
-	return paths
+	return Object.fromEntries(paths)
 }
 
-async function download() {
+async function listPaths() {
 	let filesData = await fetchPages(`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`, null)
 	let files = processFilesData(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
@@ -125,15 +127,30 @@ async function download() {
 	await fetchParentFolders(allFolders, parentFolders)
 	calcFolders(allFolders)
 	let paths = calcPaths(allFolders, files)
-	return[...new Set(paths)].sort()
+	return paths
+}
+
+async function download(ids) {
+	let promises = ids.map(id =>
+		request(`https://www.amazon.co.uk/drive/v1/nodes/${id}/contentRedirection`, {
+			responseType: 'arraybuffer'
+		})
+	)
+	let allData = await Promise.all(promises)
+	//dump data to disk instead of trying to hold all downloaded images in memory
+	let writePromises = allData.map((data, i) =>
+		writeFile(`tmp/${ids[i]}.jpg`, data)
+	)
+	await Promise.all(writePromises)
 }
 
 if (!module.parent) { //i.e. if being invoked directly on the command line
-	download().then(paths => {
-		console.log(paths.join('\n'))
+	listPaths().then(paths => {
+		console.log(JSON.stringify(paths, null, 2))
 	})
 }
 
 module.exports = {
+	listPaths,
 	download
 }
