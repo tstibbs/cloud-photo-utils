@@ -6,8 +6,8 @@ const textOverlay = require('../text-overlay')
 const width = 1920
 const height = 1080
 
-const margin = 16
-const gap = 13
+const margin = 55
+const gap = 15
 
 async function blend(inputFile) {
 	let inputBuffer = await sharp(inputFile, { failOnError: false }).rotate().withMetadata().toBuffer();
