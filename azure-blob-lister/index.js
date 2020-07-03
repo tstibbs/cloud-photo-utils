@@ -4,7 +4,7 @@ const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
 //=====================================================
 
 //may want to invoke with something like:
-//for i in {01..06}; do node . "[parent]" "Disc$i"; done
+//for i in {01..06}; do node azure-blob-lister "[parent]" "Disc$i"; done
 
 const fs = require('fs')
 const util = require('util')
@@ -40,12 +40,12 @@ async function main() {
 	try {
 		await mkdir(outputFolder)
 	} catch (err) {
-		//ignore, probably already exists
+		//ignore, probably already exists, will error later anyway if not
 	}
 	try {
-		await mkdir(parentFolder)
+		await mkdir(`${outputFolder}/${parentFolder}`)
 	} catch (err) {
-		//ignore, probably already exists
+		//ignore, probably already exists, will error later anyway if not
 	}
 	//force file to be (re)created as utf-8
 	await writeFile(filename, '', 'utf8')
