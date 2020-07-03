@@ -10,6 +10,7 @@ const util = require('util');
 const {google} = require('googleapis');
 const request = require('request');
 const readFile = util.promisify(fs.readFile)
+const writeFile = util.promisify(fs.writeFile)
 
 const SCOPES = ['https://www.googleapis.com/auth/photoslibrary.appendonly'];
 
@@ -52,25 +53,16 @@ function buildAuthUrl() {
 	});
 }
 
-function writeAuth(tokens) {
-	fs.writeFile('tmp/auth.json', JSON.stringify(tokens, null, 2), (err) => {
-		if (err) {
-			console.error(err)
-			return
-		}
-	})
+async function writeAuth(tokens) {
+	return await writeFile('tmp/auth.json', JSON.stringify(tokens, null, 2))
 }
 
-function handleToken(code) {
+async function handleToken(code) {
 	//probably doesn't matter if we use one configured with the right redirect url or not in this case
-	return authClient.getToken(code).then(res => {
-		return res.tokens;
-	}).then(tokens => {
-		console.log(tokens);
-		writeAuth(tokens);
-	}).catch(err => {
-		console.error(err);
-	});
+	let res = await authClient.getToken(code)
+	let tokens = res.tokens;
+	console.log(tokens);
+	await writeAuth(tokens);
 }
 
 async function upload(path) {
@@ -84,63 +76,69 @@ async function upload(path) {
 		console.log(data.tokens);
 		auth.access_token = data.tokens.access_token;
 		auth.expiry_date = data.tokens.expiry_date;
-		writeAuth(auth);
+		await writeAuth(auth);
 	}
 	
-	uploadContents(auth.access_token, path);
+	await uploadContents(auth.access_token, path);
 }
 
-function uploadContents(oauthToken, fileName) {
-	let input = fs.createReadStream(fileName);
-	let output = request.post('https://photoslibrary.googleapis.com/v1/uploads', {
-		headers: {
-			'Content-type': 'application/octet-stream',
-			'Authorization': `Bearer ${oauthToken}`,
-			'X-Goog-Upload-File-Name': fileName,
-			'X-Goog-Upload-Protocol': 'raw'
-		}
-	}, (error, response, uploadToken) => {
-		if (!error && response.statusCode == 200) {
-			console.log(uploadToken);
-			registerUpload(oauthToken, uploadToken, fileName);
-			//response should be an upload token
-		} else {
-			console.error(error);
-			console.error(response);
-			console.error(uploadToken);
-		}
-	});
-	input.pipe(output);
-}
-
-function registerUpload(oauthToken, uploadToken, fileName) {
-	let body = JSON.stringify({
-		//"albumId": "",//doesn't work unless this 'app' (i.e. these oauth credentials) created the album
-		"newMediaItems": [
-			{
-				"description": fileName,
-				"simpleMediaItem": {
-					"uploadToken": uploadToken
-				}
+async function uploadContents(oauthToken, fileName) {
+	let uploadToken = await new Promise(function(resolve, reject) {
+		let input = fs.createReadStream(fileName);
+		let output = request.post('https://photoslibrary.googleapis.com/v1/uploads', {
+			headers: {
+				'Content-type': 'application/octet-stream',
+				'Authorization': `Bearer ${oauthToken}`,
+				'X-Goog-Upload-File-Name': fileName,
+				'X-Goog-Upload-Protocol': 'raw'
 			}
-		]
-	}, null, 2);
-	let output = request.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
-		headers: {
-			'Content-type': 'application/json',
-			'Authorization': `Bearer ${oauthToken}`
-		},
-		body: body
-	}, (error, response, body) => {
-		if (!error && response.statusCode == 200) {
-			console.log(body);
-			//response should be an upload token
-		} else {
-			console.error(error);
-			console.error(response);
-			console.error(body);
-		}
-	});
+		}, (error, response, uploadToken) => {
+			if (!error && response.statusCode == 200) {
+				console.log(uploadToken);
+				resolve(uploadToken)
+			} else {
+				console.error(error);
+				console.error(response);
+				console.error(uploadToken);
+				reject(error)
+			}
+		});
+		input.pipe(output);
+	})
+	await registerUpload(oauthToken, uploadToken, fileName);
+}
+
+async function registerUpload(oauthToken, uploadToken, fileName) {
+	return new Promise(function(resolve, reject) {
+		let body = JSON.stringify({
+			//"albumId": "",//doesn't work unless this 'app' (i.e. these oauth credentials) created the album
+			"newMediaItems": [
+				{
+					"description": fileName,
+					"simpleMediaItem": {
+						"uploadToken": uploadToken
+					}
+				}
+			]
+		}, null, 2);
+		let output = request.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
+			headers: {
+				'Content-type': 'application/json',
+				'Authorization': `Bearer ${oauthToken}`
+			},
+			body: body
+		}, (error, response, body) => {
+			if (!error && response.statusCode == 200) {
+				console.log(body);
+				resolve()
+			} else {
+				console.error(error);
+				console.error(response);
+				console.error(body);
+				reject(error)
+			}
+		});
+	})
 }
 
 module.exports = {
