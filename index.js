@@ -1,18 +1,29 @@
 require('dotenv').config()
 const diskPath = process.env.disk_path
+const useCache = process.env.use_cache == 'true'
 
 //=====================================================
 
-const fs = require('fs')
-const util = require('util')
-const readdir = util.promisify(fs.readdir)
+const {readFile, writeFile, readdir} = require('./utils')
 
 const {listPaths, download} = require('./amazon-photos-downloader')
 const converter = require('./photo-converter')
 const {upload} = require('./google-photos-uploader')
 
+async function buildPathsToIds() {
+    const cachePath = 'tmp/listCache.json'
+    if (useCache) {
+        let raw = await readFile(cachePath)
+        return JSON.parse(raw)
+    } else {
+        let pathsToIds = await listPaths()
+        await writeFile(cachePath, JSON.stringify(pathsToIds, null, 2))
+        return pathsToIds
+    }
+}
+
 async function run() {
-    let pathsToIds = await listPaths()
+    let pathsToIds = await buildPathsToIds()
     let paths = [...new Set(Object.keys(pathsToIds))].sort()
     let pathsOnDisk = paths.filter(path => !path.startsWith('/Pictures/'))
     let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))
@@ -23,7 +34,9 @@ async function run() {
     }
 
     let idsToDownload = pathsInCloud.map(path => pathsToIds[path])
-    await download(idsToDownload)
+    if (!useCache) {
+        await download(idsToDownload)
+    }
     pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`)
     for (path of pathsInCloud) {
         console.log(`Converting ${path}`)

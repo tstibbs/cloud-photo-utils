@@ -1,18 +1,24 @@
 const exif = require('./exif.js')
-const {buildDescriptor} = require('./geocoding.js')
+const geocoding = require('./geocoding.js')
 const {buildImage} = require('./textToImage.js')
 
 async function buildOverlays(filename) {
     let {lat, lng, date} = await exif.getDataFromExif(filename)
     let locationDescriptor = null
     if (lat != null && lng != null) {
-        locationDescriptor = await buildDescriptor(lat, lng)
+        locationDescriptor = await geocoding.buildDescriptor(lat, lng)
     }
     let {top, bottom} = buildImage(date, locationDescriptor)
     return {top, bottom}
 }
 
+async function close() {
+    await exif.close()
+    await geocoding.close()
+}
+
 module.exports = {
     buildOverlays,
-    close: exif.close
+    init: geocoding.init,
+    close
 }

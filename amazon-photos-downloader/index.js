@@ -7,9 +7,7 @@ const cookie = process.env.amazon_cookie
 
 const assert = require('assert')
 const axios = require('axios')
-const fs = require('fs')
-const util = require('util')
-const writeFile = util.promisify(fs.writeFile)
+const {writeFile} = require('../utils')
 
 const axiosInstance = axios.create({
 	baseURL: 'https://www.amazon.co.uk/drive/v1/',

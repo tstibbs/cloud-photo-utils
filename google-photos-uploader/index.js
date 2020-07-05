@@ -6,11 +6,9 @@ const google_client_secret = process.env.google_client_secret
 //=====================================================
 
 const fs = require('fs');
-const util = require('util');
 const {google} = require('googleapis');
 const request = require('request');
-const readFile = util.promisify(fs.readFile)
-const writeFile = util.promisify(fs.writeFile)
+const {readFile, writeFile} = require('../utils')
 
 const SCOPES = ['https://www.googleapis.com/auth/photoslibrary.appendonly'];
 

@@ -96,5 +96,6 @@ if (!module.parent) { //i.e. if being invoked directly on the command line
 
 module.exports = {
     blend,
-    close: textOverlay.close
+	close: textOverlay.close,
+	init: textOverlay.init
 }

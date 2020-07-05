@@ -7,10 +7,8 @@ const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
 //for i in {01..06}; do node azure-blob-lister "[parent]" "Disc$i"; done
 
 const fs = require('fs')
-const util = require('util')
 const {BlobServiceClient} = require("@azure/storage-blob")
-const writeFile = util.promisify(fs.writeFile)
-const mkdir = util.promisify(fs.mkdir)
+const {writeFile, mkdir} = require('../utils')
 
 const outputFolder = 'output/azure-blob-lists'
 
