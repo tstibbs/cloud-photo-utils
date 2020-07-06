@@ -52,6 +52,7 @@ async function run() {
 
 async function main() {
     try {
+        await converter.init()
         await run()
     } catch (e) {
         console.error(e)

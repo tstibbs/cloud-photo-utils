@@ -1,13 +1,16 @@
 const axios = require('axios');
-const {readFile, writeFile} = require('../utils')
+const {readFile, writeFile, fileExists} = require('../utils')
 
 const useCache = process.env.use_cache == 'true'
 const cachePath = 'tmp/geocodingCache.json'
 
-let geoCodingCache = {}
+const geoCodingResults = {}
+let geoCodingCache = null
+const geoCodingErrors = []//when results from this time that differ from last time
 
 async function init() {
-    if (useCache) {
+    let loadFile = useCache || await fileExists(cachePath)
+    if (loadFile) {
         let raw = await readFile(cachePath)
         geoCodingCache = JSON.parse(raw)
     }
@@ -15,7 +18,11 @@ async function init() {
 
 async function close() {
     if (!useCache) {
-        await writeFile(cachePath, JSON.stringify(geoCodingCache, null, 2))
+        await writeFile(cachePath, JSON.stringify(geoCodingResults, null, 2))
+    }
+    if (geoCodingErrors.length > 0) {
+        console.error('geoCodingErrors:')
+        console.error(geoCodingErrors.join('\n'))
     }
 }
 
@@ -48,9 +55,15 @@ async function buildDescriptor(lat, lng) {
     let descriptor;
     if (useCache) {
         descriptor = geoCodingCache[historyKey]
+        if (descriptor == null) {
+            throw Error(`Geocoding cache entry not found for: ${historyKey}`)
+        }
     } else {
         descriptor = await fetchDescriptor(lat, lng)
-        geoCodingCache[historyKey] = descriptor
+        geoCodingResults[historyKey] = descriptor
+        if (geoCodingCache != null && geoCodingCache[historyKey] != null && descriptor != geoCodingCache[historyKey]) {
+            geoCodingErrors.push(`Expected ${geoCodingCache[historyKey]}; was ${descriptor}`)
+        }
     }
     return descriptor
 }
