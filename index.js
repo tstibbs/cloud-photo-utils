@@ -4,8 +4,9 @@ const useCache = process.env.use_cache == 'true'
 
 //=====================================================
 
-const {readFile, writeFile, readdir} = require('./utils')
+const readDirRecursive = require('fs-readdir-recursive')
 
+const {readFile, writeFile, readdir} = require('./utils')
 const {listPaths, download} = require('./amazon-photos-downloader')
 const converter = require('./photo-converter')
 const {upload} = require('./google-photos-uploader')
@@ -28,17 +29,22 @@ async function run() {
     let pathsOnDisk = paths.filter(path => !path.startsWith('/Pictures/'))
     let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))
     pathsOnDisk = pathsOnDisk.map(path => path.replace(/^\/Backup\//, diskPath))
-    for (path of pathsOnDisk) {
-        console.log(`Converting ${path}`)
-        await converter.blend(path)
-    }
+    const otherInputDir = 'tmp/otherInput'
+    let otherPaths = readDirRecursive(otherInputDir)
+    otherPaths = otherPaths.map(otherPath => otherInputDir + '/' + otherPath)
 
     let idsToDownload = pathsInCloud.map(path => pathsToIds[path])
     if (!useCache) {
         await download(idsToDownload)
     }
     pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`)
-    for (path of pathsInCloud) {
+
+    let allPaths = [
+        ...pathsOnDisk,
+        ...pathsInCloud,
+        ...otherPaths
+    ]
+    for (path of allPaths) {
         console.log(`Converting ${path}`)
         await converter.blend(path)
     }
