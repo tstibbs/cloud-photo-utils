@@ -1,13 +1,17 @@
 const exif = require('./exif.js')
 const geocoding = require('./geocoding.js')
 const {buildImage} = require('./textToImage.js')
+const {storeGeoDetails} = require('../debug-printer.js')
 
 async function buildOverlays(filename) {
     let {lat, lng, date} = await exif.getDataFromExif(filename)
     let locationDescriptor = null
+    let details = null
     if (lat != null && lng != null) {
-        locationDescriptor = await geocoding.buildDescriptor(lat, lng)
+        details = await geocoding.buildDescriptor(lat, lng)
+        locationDescriptor = details.descriptor
     }
+    storeGeoDetails(filename, details)
     let {top, bottom} = buildImage(date, locationDescriptor)
     return {top, bottom}
 }

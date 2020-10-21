@@ -4,6 +4,10 @@ const {readFile, writeFile, fileExists} = require('../utils')
 const useCache = process.env.use_cache == 'true'
 const cachePath = 'tmp/geocodingCache.json'
 
+const element1Fields = ['tourism', 'historic', 'railway', 'shop', 'building', 'wood', 'amenity', 'natural', 'leisure', 'road']
+const element2Fields = ['village', 'town', 'suburb', 'residential']
+const element3Fields = ['city', 'county']
+
 const geoCodingResults = {}
 let geoCodingCache = null
 const geoCodingErrors = []//when results from this time that differ from last time
@@ -26,50 +30,87 @@ async function close() {
     }
 }
 
-function parseField(...fields) {
-    fields = fields.filter(item => item != undefined)
-    let field = fields.length >= 0 ? fields[0] : null // 
-    return field
-}
-
 async function fetchDescriptor(lat, lng) {
-    let response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`)
+    let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`
+    let response = await axios.get(url)
     let data = response.data;
     let address = data.address
-    let titleField = parseField(address.tourism, address.historic, address.railway, address.shop, address.building)
-    let locality = parseField(address.village, address.town, address.suburb)
-    let area = parseField(address.city, address.county)
-    let country = address.country != 'United Kingdom' ? address.country : null
-    if (locality == null || area == null) {
-        console.error("Didn't find all the fields we expected:")
-        console.error(`locality: ${locality}`)
-        console.error(`area: ${area}`)
-        console.error(data)
+    let chosenFields = chooseFields(address)
+    let descriptor = chosenFields.join(', ')
+    return {
+        descriptor,
+        lat,
+        lng,
+        url,
+        address,
+        chosenFields
     }
-    let descriptor = [titleField, locality, area, country].filter(item => item != null).join(', ')
-    return descriptor
+}
+
+function chooseField(fieldNames, address) {
+    let found = fieldNames.find(fieldName => address[fieldName] != null)
+    return found
+}
+
+//this function is the core algorithm that decides how to display the textual representation of each location
+function chooseFields(address) {
+    let titleFieldKey = chooseField(element1Fields, address)
+    let localityKey = chooseField(element2Fields, address)
+    let areaKey = chooseField(element3Fields, address)
+    if (localityKey == undefined && areaKey == 'city' && 'county' in address) {
+        localityKey = 'city'
+        areaKey = 'county'
+    }
+    let country = address.country != 'United Kingdom' ? address.country : null
+    if (localityKey == null || areaKey == null) {
+        console.error("Didn't find all the fields we expected:")
+        console.error(`localityKey: ${localityKey}`)
+        console.error(`areaKey: ${areaKey}`)
+        console.error(address)
+    }
+    let titleField = address[titleFieldKey]
+    let locality = address[localityKey]
+    let area = address[areaKey]
+    if (titleFieldKey == 'road' && localityKey == 'suburb' && areaKey == 'city' && (address.county == null || !address[areaKey].includes(address.county))) {
+        locality = null
+    }
+    if (titleField != null && titleField.includes(locality)) {
+        locality = null
+    } else if (titleField != null && titleField.includes(area)) {
+        area = null
+    } else if (locality != null && locality.includes(titleField)) {
+        titleField = null
+    } else if (locality != null && locality.includes(area)) {
+        area = null
+    } else if (area != null && area.includes(titleField)) {
+        titleField = null
+    } else if (area != null && area.includes(locality)) {
+        locality = null
+    }
+    return [titleField, locality, area, country].filter(element => element != null)
 }
 
 async function buildDescriptor(lat, lng) {
     let historyKey = `${lat},${lng}`
-    let descriptor;
+    let descriptorAndDetails;
     if (useCache) {
-        descriptor = geoCodingCache[historyKey]
-        if (descriptor == null) {
+        descriptorAndDetails = geoCodingCache[historyKey]
+        if (descriptorAndDetails == null) {
             throw Error(`Geocoding cache entry not found for: ${historyKey}`)
         }
     } else {
-        descriptor = await fetchDescriptor(lat, lng)
-        geoCodingResults[historyKey] = descriptor
-        if (geoCodingCache != null && geoCodingCache[historyKey] != null && descriptor != geoCodingCache[historyKey]) {
-            geoCodingErrors.push(`Expected ${geoCodingCache[historyKey]}; was ${descriptor}`)
+        descriptorAndDetails = await fetchDescriptor(lat, lng)
+        geoCodingResults[historyKey] = descriptorAndDetails
+        if (geoCodingCache != null && geoCodingCache[historyKey] != null && descriptorAndDetails.descriptor != geoCodingCache[historyKey].descriptor) {
+            geoCodingErrors.push(`Expected ${geoCodingCache[historyKey].descriptor}; was ${descriptorAndDetails.descriptor}`)
         }
     }
-    return descriptor
+    return descriptorAndDetails
 }
 
 module.exports = {
     buildDescriptor,
+    chooseFields,
     init,
     close
 }
