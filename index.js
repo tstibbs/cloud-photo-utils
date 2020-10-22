@@ -1,6 +1,7 @@
 require('dotenv').config()
 const diskPath = process.env.disk_path
 const useCache = process.env.use_cache == 'true'
+const debugOnly = process.env.debugOnly == 'false'
 
 //=====================================================
 
@@ -8,12 +9,14 @@ const nodePath = require('path')
 
 const readDirRecursive = require('fs-readdir-recursive')
 
-const {readFile, writeFile, readdir} = require('./utils')
+const {readFile, writeFile} = require('./utils')
 const {listPaths, download} = require('./amazon-photos-downloader')
 const converter = require('./photo-converter')
 const {upload} = require('./google-photos-uploader')
 const {printDebugOutput} = require('./debug-printer.js')
 const {buildOverlays} = require('./text-overlay')
+
+let outputDir = 'output/converted-photos/'
 
 async function buildPathsToIds() {
     const cachePath = 'tmp/listCache.json'
@@ -27,46 +30,50 @@ async function buildPathsToIds() {
     }
 }
 
-const debugOnly = process.env.debugOnly == 'false'
-
-async function convert(path) {
-    console.log(`Converting ${path}`)
+async function convert(referencePath, inputPath, outputPath) {
+    console.log(`Converting ${referencePath}`)
     if (!debugOnly) {
-        await converter.blend(path)
+        await converter.blend(inputPath, outputPath)
     } else {
-        await buildOverlays(path)
+        await buildOverlays(inputPath)
     }
 }
 
+function transformObj(obj, transformer) {
+    return Object.fromEntries(transformer(Object.entries(obj)))
+}
+
 async function run() {
-    let pathsToIds = await buildPathsToIds()
-    let paths = [...new Set(Object.keys(pathsToIds))].sort()
-    let pathsOnDisk = paths.filter(path => !path.startsWith('/Pictures/'))
-    let pathsInCloud = paths.filter(path => path.startsWith('/Pictures/'))
-    pathsOnDisk = pathsOnDisk.map(path => path.replace(/^\/Backup\//, diskPath))
+    let pathsToIds = await buildPathsToIds() //map of the cloud path to the cloud object id
+    let pathsOnDisk = transformObj(pathsToIds, entries => entries.filter(([path, id]) => !path.startsWith('/Pictures/')).map(([path, id]) => [path, path.replace(/^\/Backup\//, diskPath)]))
+    let pathsInCloud = transformObj(pathsToIds, entries => entries.filter(([path, id]) => path.startsWith('/Pictures/')))
     const otherInputDir = 'tmp/otherInput'
     let otherPaths = readDirRecursive(otherInputDir)
-    otherPaths = otherPaths.map(otherPath => otherInputDir + '/' + otherPath).map(otherPath => nodePath.resolve(otherPath))
+    otherPaths = Object.fromEntries(otherPaths.map(otherPath => ['Unmanaged/' + otherPath, nodePath.resolve(otherInputDir + '/' + otherPath)]))
 
-    let idsToDownload = pathsInCloud.map(path => pathsToIds[path])
     if (!useCache) {
-        await download(idsToDownload)
+        await download(Object.values(pathsInCloud))
     }
-    pathsInCloud = idsToDownload.map(id => `tmp/${id}.jpg`).map(otherPath => nodePath.resolve(otherPath))
+    pathsInCloud = transformObj(pathsInCloud, entries => entries.map(([path, id]) => [path,  nodePath.resolve(`tmp/${id}.jpg`)]))
 
-    let allPaths = [
+    let allPaths = {
         ...pathsOnDisk,
         ...pathsInCloud,
         ...otherPaths
-    ]
-    for (path of allPaths) {
-        await convert(path)
     }
+    allPaths = Object.entries(allPaths).map(([referencePath, physicalPath]) => [referencePath, {
+        inputPath: physicalPath,
+        outputPath: outputDir + 'blended-' + referencePath.replace(/(\/|\\|:)/g, '__')
+    }])
+    console.log(JSON.stringify(allPaths, null, 2))
+    console.log(allPaths.length)
+    for ([referencePath, {inputPath, outputPath}] of allPaths) {
+        await convert(referencePath, inputPath, outputPath)
+    }
+    allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
-    let outputDir = 'output/converted-photos/'
-    let convertedFiles = await readdir(outputDir)
-    for (path of convertedFiles) {
-        await upload(outputDir + path)
+    for ([referencePath, outputPath] of allPaths) {
+        await upload(referencePath, outputPath)
     }
 
     await printDebugOutput()

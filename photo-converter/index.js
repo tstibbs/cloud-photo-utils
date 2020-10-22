@@ -9,8 +9,8 @@ const height = 1080
 const margin = 55
 const gap = 15
 
-async function blend(inputFile) {
-	let inputBuffer = await sharp(inputFile, { failOnError: false }).rotate().withMetadata().toBuffer();
+async function blend(inputPath, outputPath) {
+	let inputBuffer = await sharp(inputPath, { failOnError: false }).rotate().withMetadata().toBuffer();
 	let metadata = await sharp(inputBuffer).metadata()
 	let portrait = (metadata.height / metadata.width) > (height / width)//if landscape but the letterboxes will still be left and right then treat as portrait
 	let backgroundPipeline = sharp(inputBuffer)
@@ -35,7 +35,7 @@ async function blend(inputFile) {
 
 	let [background, foregroundBuffer] = await Promise.all([backgroundPipeline, foregroundPipeline])
 	
-	let overlays = await textOverlay.buildOverlays(inputFile)
+	let overlays = await textOverlay.buildOverlays(inputPath)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
 	let bottomHeight = null
@@ -77,8 +77,7 @@ async function blend(inputFile) {
 	}
 
 	let outputPipeline = background.composite(compositions)
-	let outputFile = inputFile.replace(/(\/|\\|:)/g, '__')
-	let info = await outputPipeline.toFile(`output/converted-photos/blended-${outputFile}`)
+	let info = await outputPipeline.toFile(outputPath)
 	console.log(info)
 }
 

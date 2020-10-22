@@ -8,7 +8,7 @@ const google_client_secret = process.env.google_client_secret
 const fs = require('fs');
 const {google} = require('googleapis');
 const request = require('request');
-const {readFile, writeFile} = require('../utils')
+const {readFile, writeFile, tryWithBackoff} = require('../utils')
 
 const SCOPES = ['https://www.googleapis.com/auth/photoslibrary.appendonly'];
 
@@ -63,7 +63,7 @@ async function handleToken(code) {
 	await writeAuth(tokens);
 }
 
-async function upload(path) {
+async function upload(referencePath, filePath) {
 	let contents = await readFile('tmp/auth.json')
 	let auth = JSON.parse(contents);
 	let expiryDate = new Date(auth.expiry_date);
@@ -77,49 +77,52 @@ async function upload(path) {
 		await writeAuth(auth);
 	}
 	
-	await uploadContents(auth.access_token, path);
+	await uploadContents(auth.access_token, referencePath, filePath);
 }
 
-async function uploadContents(oauthToken, fileName) {
+async function uploadContents(oauthToken, referencePath, filePath) {
 	let uploadToken = await new Promise(function(resolve, reject) {
-		let input = fs.createReadStream(fileName);
+		let input = fs.createReadStream(filePath);
 		let output = request.post('https://photoslibrary.googleapis.com/v1/uploads', {
 			headers: {
 				'Content-type': 'application/octet-stream',
 				'Authorization': `Bearer ${oauthToken}`,
-				'X-Goog-Upload-File-Name': fileName,
+				'X-Goog-Upload-File-Name': filePath,
 				'X-Goog-Upload-Protocol': 'raw'
 			}
 		}, (error, response, uploadToken) => {
 			if (!error && response.statusCode == 200) {
-				console.log(uploadToken);
 				resolve(uploadToken)
 			} else {
 				console.error(error);
 				console.error(response);
 				console.error(uploadToken);
+				console.log(`Failed staging ${referencePath}`)
 				reject(error)
 			}
 		});
 		input.pipe(output);
 	})
-	await registerUpload(oauthToken, uploadToken, fileName);
+
+	await tryWithBackoff(30, 300, async () => {
+		await registerUpload(oauthToken, uploadToken, referencePath)
+	}, "during upload")
 }
 
-async function registerUpload(oauthToken, uploadToken, fileName) {
+async function registerUpload(oauthToken, uploadToken, referencePath) {
 	return new Promise(function(resolve, reject) {
 		let body = JSON.stringify({
 			//"albumId": "",//doesn't work unless this 'app' (i.e. these oauth credentials) created the album
 			"newMediaItems": [
 				{
-					"description": fileName,
 					"simpleMediaItem": {
-						"uploadToken": uploadToken
+						"uploadToken": uploadToken,
+						fileName: referencePath
 					}
 				}
 			]
 		}, null, 2);
-		let output = request.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
+		request.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
 			headers: {
 				'Content-type': 'application/json',
 				'Authorization': `Bearer ${oauthToken}`
@@ -127,12 +130,11 @@ async function registerUpload(oauthToken, uploadToken, fileName) {
 			body: body
 		}, (error, response, body) => {
 			if (!error && response.statusCode == 200) {
-				console.log(body);
+				console.log(`Uploaded ${referencePath}`)
 				resolve()
 			} else {
-				console.error(error);
-				console.error(response);
 				console.error(body);
+				console.log(`Failed uploading ${referencePath}`)
 				reject(error)
 			}
 		});
