@@ -1,13 +1,13 @@
 {
   "dependencies": {
-    "@azure/storage-blob": "^12.1.2",
-    "axios": "^0.19.2",
+    "@azure/storage-blob": "^12.2.1",
+    "axios": "^0.21.0",
     "dotenv": "^8.2.0",
-    "exiftool-vendored": "^11.3.0",
+    "exiftool-vendored": "^12.2.0",
     "fs-readdir-recursive": "^1.1.0",
-    "googleapis": "^51.0.0",
+    "googleapis": "^61.0.0",
     "request": "^2.88.2",
-    "sharp": "^0.25.3",
+    "sharp": "^0.26.2",
     "text2png": "^2.3.0"
   }
 }
