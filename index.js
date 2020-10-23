@@ -12,7 +12,7 @@ const readDirRecursive = require('fs-readdir-recursive')
 const {readFile, writeFile} = require('./utils')
 const {listPaths, download} = require('./amazon-photos-downloader')
 const converter = require('./photo-converter')
-const {upload} = require('./google-photos-uploader')
+const googlePhotos = require('./google-photos-uploader')
 const {printDebugOutput} = require('./debug-printer.js')
 const {buildOverlays} = require('./text-overlay')
 
@@ -73,7 +73,7 @@ async function run() {
     allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
     for ([referencePath, outputPath] of allPaths) {
-        await upload(referencePath, outputPath)
+        await googlePhotos.upload(referencePath, outputPath)
     }
 
     await printDebugOutput()
@@ -81,6 +81,7 @@ async function run() {
 
 async function main() {
     try {
+        await googlePhotos.init()
         await converter.init()
         await run()
     } catch (e) {

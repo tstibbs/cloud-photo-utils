@@ -2,6 +2,7 @@ require('dotenv').config()
 const google_client_id = process.env.google_client_id
 const google_project_id = process.env.google_project_id
 const google_client_secret = process.env.google_client_secret
+const albumTitle = process.env.google_album_title //must be the title of an album created through this app
 
 //=====================================================
 
@@ -10,7 +11,7 @@ const {google} = require('googleapis');
 const request = require('request');
 const {readFile, writeFile, tryWithBackoff} = require('../utils')
 
-const SCOPES = ['https://www.googleapis.com/auth/photoslibrary.appendonly'];
+const SCOPES = ['https://www.googleapis.com/auth/photoslibrary.appendonly', 'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata'];
 
 const credentials = {
 	"installed": {
@@ -34,14 +35,23 @@ if (!module.parent) { //i.e. if being invoked directly on the command line
 		handleToken(allArgs[1]);
 	} else if (allArgs.length == 2 && allArgs[0] == 'upload') {
 		upload(allArgs[1]);
+	} else if (allArgs.length == 1 && allArgs[0] == 'create-album') {
+		createAlbum();
 	} else {
 		let command = `${process.argv[0]}`.split(/(\/|\\)/).slice(-1)[0]
 		let module = `${process.argv[1]}`.split(/(\/|\\)/).slice(-1)[0]
 		console.error(`Usage:
     ${command} ${module} login
     ${command} ${module} success code-from-url
-    ${command} ${module} upload file-path`)
+    ${command} ${module} upload file-path
+    ${command} ${module} create-album album-name`)
 	}
+}
+
+let albumId = 'not populated yet'
+
+async function init() {
+	albumId = await getAlbumId()
 }
 
 function buildAuthUrl() {
@@ -64,20 +74,11 @@ async function handleToken(code) {
 }
 
 async function upload(referencePath, filePath) {
-	let contents = await readFile('tmp/auth.json')
-	let auth = JSON.parse(contents);
-	let expiryDate = new Date(auth.expiry_date);
-	expiryDate.setMinutes(expiryDate.getMinutes() - 5)//allow ourselves some time to get the upload done before this expires
-	if (expiryDate < Date.now()) {
-		console.log('refreshing token');
-		let data = await authClient.refreshToken(auth.refresh_token)
-		console.log(data.tokens);
-		auth.access_token = data.tokens.access_token;
-		auth.expiry_date = data.tokens.expiry_date;
-		await writeAuth(auth);
-	}
-	
-	await uploadContents(auth.access_token, referencePath, filePath);
+	let oauthToken = await getOauthToken()
+	let uploadToken = await uploadContents(oauthToken, referencePath, filePath);
+	await tryWithBackoff(30, 300, async () => {
+		await registerUpload(oauthToken, uploadToken, referencePath)
+	}, "during upload")
 }
 
 async function uploadContents(oauthToken, referencePath, filePath) {
@@ -103,38 +104,105 @@ async function uploadContents(oauthToken, referencePath, filePath) {
 		});
 		input.pipe(output);
 	})
-
-	await tryWithBackoff(30, 300, async () => {
-		await registerUpload(oauthToken, uploadToken, referencePath)
-	}, "during upload")
+	return uploadToken
 }
 
 async function registerUpload(oauthToken, uploadToken, referencePath) {
-	return new Promise(function(resolve, reject) {
-		let body = JSON.stringify({
-			//"albumId": "",//doesn't work unless this 'app' (i.e. these oauth credentials) created the album
-			"newMediaItems": [
-				{
-					"simpleMediaItem": {
-						"uploadToken": uploadToken,
-						fileName: referencePath
-					}
+	let url = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate'
+	let contentType = 'application/json'
+	let body = JSON.stringify({
+		"albumId": albumId,
+		"newMediaItems": [
+			{
+				"simpleMediaItem": {
+					"uploadToken": uploadToken,
+					fileName: referencePath
 				}
-			]
-		}, null, 2);
-		request.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
-			headers: {
-				'Content-type': 'application/json',
-				'Authorization': `Bearer ${oauthToken}`
-			},
-			body: body
+			}
+		]
+	}, null, 2);
+	try {
+		await makeRequest('POST', url, body, contentType, oauthToken)
+		console.log(`Uploaded ${referencePath}`)
+	} catch (e) {
+		console.log(`Failed uploading ${referencePath}`)
+		throw e
+	}
+}
+
+async function createAlbum() {
+	let oauthToken = await getOauthToken()
+	let url = 'https://photoslibrary.googleapis.com/v1/albums'
+	let contentType = 'application/json'
+	let body = JSON.stringify({
+		"album": {
+			"title": albumTitle
+		}
+	}, null, 2);
+	try {
+		await makeRequest('POST', url, body, contentType, oauthToken)
+		console.log(`Created album ${albumTitle}`)
+	} catch (e) {
+		console.log(`Failed creating album ${albumTitle}`)
+		throw e
+	}
+}
+
+async function getAlbumId() {
+	let oauthToken = await getOauthToken()
+	let url = 'https://photoslibrary.googleapis.com/v1/albums?pageSize=50'
+	let contentType = null
+	let body = null
+	try {
+		let rawResponse = await makeRequest('GET', url, body, contentType, oauthToken)
+		let response = JSON.parse(rawResponse)
+		if (response.nextPageToken != null) {
+			throw new Error("Code not equiped for paging")
+		}
+		let album = response.albums.filter(album => album.title = albumTitle)
+		let albumId = album[0].id
+		console.log(`Fetched album id for ${albumTitle}`)
+		return albumId
+	} catch (e) {
+		console.log(`Failed fetching album id for ${albumTitle}`)
+		throw e
+	}
+}
+
+async function getOauthToken() {
+	let contents = await readFile('tmp/auth.json')
+	let auth = JSON.parse(contents);
+	let expiryDate = new Date(auth.expiry_date);
+	expiryDate.setMinutes(expiryDate.getMinutes() - 5)//allow ourselves some time to get the upload done before this expires
+	if (expiryDate < Date.now()) {
+		console.log('refreshing token');
+		let data = await authClient.refreshToken(auth.refresh_token)
+		console.log(data.tokens);
+		auth.access_token = data.tokens.access_token;
+		auth.expiry_date = data.tokens.expiry_date;
+		await writeAuth(auth);
+	}
+	return auth.access_token
+}
+
+async function makeRequest(method, url, requestBody, contentType, oauthToken) {
+	let headers = {
+		'Authorization': `Bearer ${oauthToken}`
+	}
+	if (contentType != null) {
+		headers['Content-type'] = contentType
+	}
+	return new Promise(function(resolve, reject) {
+		request({
+			method,
+			uri: url,
+			headers: headers,
+			body: requestBody
 		}, (error, response, body) => {
 			if (!error && response.statusCode == 200) {
-				console.log(`Uploaded ${referencePath}`)
-				resolve()
+				resolve(body)
 			} else {
 				console.error(body);
-				console.log(`Failed uploading ${referencePath}`)
 				reject(error)
 			}
 		});
@@ -142,5 +210,6 @@ async function registerUpload(oauthToken, uploadToken, referencePath) {
 }
 
 module.exports = {
+	init,
 	upload
 }
