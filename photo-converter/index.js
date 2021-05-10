@@ -2,6 +2,8 @@
 
 const sharp = require('sharp')
 const textOverlay = require('../text-overlay')
+const {writeExifData} = require('../text-overlay/exif')
+
 
 const width = 1920
 const height = 1080
@@ -38,6 +40,7 @@ async function blend(inputPath, outputPath) {
 	let overlays = await textOverlay.buildOverlays(inputPath)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
+	let exifData = overlays.exifData
 	let bottomHeight = null
 	
 	let compositions = [
@@ -79,6 +82,8 @@ async function blend(inputPath, outputPath) {
 	let outputPipeline = background.composite(compositions)
 	let info = await outputPipeline.toFile(outputPath)
 	console.log(info)
+	//write the exif back to the converted file for reference
+	await writeExifData(outputPath, exifData)
 }
 
 if (!module.parent) { //i.e. if being invoked directly on the command line

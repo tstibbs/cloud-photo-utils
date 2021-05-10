@@ -4,7 +4,8 @@ const {buildImage} = require('./textToImage.js')
 const {storeGeoDetails} = require('../debug-printer.js')
 
 async function buildOverlays(filename) {
-    let {lat, lng, date} = await exif.getDataFromExif(filename)
+    let exifData = await exif.getDataFromExif(filename)
+    let {lat, lng, date} = exifData
     let locationDescriptor = null
     let details = null
     if (lat != null && lng != null) {
@@ -13,7 +14,7 @@ async function buildOverlays(filename) {
     }
     storeGeoDetails(filename, details)
     let {top, bottom} = buildImage(date, locationDescriptor)
-    return {top, bottom}
+    return {top, bottom, exifData}
 }
 
 async function close() {
