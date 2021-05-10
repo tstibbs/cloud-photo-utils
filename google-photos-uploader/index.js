@@ -150,16 +150,24 @@ async function createAlbum() {
 
 async function getAlbumId() {
 	let oauthToken = await getOauthToken()
-	let url = 'https://photoslibrary.googleapis.com/v1/albums?pageSize=50'
+	let baseUrl = 'https://photoslibrary.googleapis.com/v1/albums?pageSize=50'
 	let contentType = null
 	let body = null
 	try {
-		let rawResponse = await makeRequest('GET', url, body, contentType, oauthToken)
-		let response = JSON.parse(rawResponse)
-		if (response.nextPageToken != null) {
-			throw new Error("Code not equiped for paging")
-		}
-		let album = response.albums.filter(album => album.title = albumTitle)
+		let nextToken = null
+		let albums = []
+		do {
+			let url = baseUrl
+			if (nextToken != null) {
+				url = `${baseUrl}&pageToken=${nextToken}`
+				nextToken = null
+			}
+			let rawResponse = await makeRequest('GET', url, body, contentType, oauthToken)
+			let response = JSON.parse(rawResponse)
+			albums = albums.concat(response.albums)
+			nextToken = response.nextPageToken
+		} while (nextToken != null);
+		let album = albums.filter(album => album != null && album.title == albumTitle)
 		let albumId = album[0].id
 		console.log(`Fetched album id for ${albumTitle}`)
 		return albumId
