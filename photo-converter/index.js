@@ -11,7 +11,7 @@ const height = 1080
 const margin = 55
 const gap = 15
 
-async function blend(inputPath, outputPath) {
+async function blend(inputPath, outputPath, referencePath) {
 	let inputBuffer = await sharp(inputPath, { failOnError: false }).rotate().withMetadata().toBuffer();
 	let metadata = await sharp(inputBuffer).metadata()
 	let portrait = (metadata.height / metadata.width) > (height / width)//if landscape but the letterboxes will still be left and right then treat as portrait
@@ -37,7 +37,7 @@ async function blend(inputPath, outputPath) {
 
 	let [background, foregroundBuffer] = await Promise.all([backgroundPipeline, foregroundPipeline])
 	
-	let overlays = await textOverlay.buildOverlays(inputPath)
+	let overlays = await textOverlay.buildOverlays(inputPath, referencePath)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
 	let exifData = overlays.exifData

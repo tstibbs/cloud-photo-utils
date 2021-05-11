@@ -33,9 +33,9 @@ async function buildPathsToIds() {
 async function convert(referencePath, inputPath, outputPath) {
     console.log(`Converting ${referencePath}`)
     if (!debugOnly) {
-        await converter.blend(inputPath, outputPath)
+        await converter.blend(inputPath, outputPath, referencePath)
     } else {
-        await buildOverlays(inputPath)
+        await buildOverlays(inputPath, referencePath)
     }
 }
 
