@@ -19,75 +19,86 @@ const {buildOverlays} = require('./text-overlay')
 let outputDir = 'output/converted-photos/'
 
 async function buildPathsToIds() {
-    const cachePath = 'tmp/listCache.json'
-    if (useCache) {
-        let raw = await readFile(cachePath)
-        return JSON.parse(raw)
-    } else {
-        let pathsToIds = await listPaths()
-        await writeFile(cachePath, JSON.stringify(pathsToIds, null, 2))
-        return pathsToIds
-    }
+	const cachePath = 'tmp/listCache.json'
+	if (useCache) {
+		let raw = await readFile(cachePath)
+		return JSON.parse(raw)
+	} else {
+		let pathsToIds = await listPaths()
+		await writeFile(cachePath, JSON.stringify(pathsToIds, null, 2))
+		return pathsToIds
+	}
 }
 
 async function convert(referencePath, inputPath, outputPath) {
-    console.log(`Converting ${referencePath}`)
-    if (!debugOnly) {
-        await converter.blend(inputPath, outputPath, referencePath)
-    } else {
-        await buildOverlays(inputPath, referencePath)
-    }
+	console.log(`Converting ${referencePath}`)
+	if (!debugOnly) {
+		await converter.blend(inputPath, outputPath, referencePath)
+	} else {
+		await buildOverlays(inputPath, referencePath)
+	}
 }
 
 function transformObj(obj, transformer) {
-    return Object.fromEntries(transformer(Object.entries(obj)))
+	return Object.fromEntries(transformer(Object.entries(obj)))
 }
 
 async function run() {
-    let pathsToIds = await buildPathsToIds() //map of the cloud path to the cloud object id
-    let pathsOnDisk = transformObj(pathsToIds, entries => entries.filter(([path, id]) => !path.startsWith('/Pictures/')).map(([path, id]) => [path, path.replace(/^\/Backup\//, diskPath)]))
-    let pathsInCloud = transformObj(pathsToIds, entries => entries.filter(([path, id]) => path.startsWith('/Pictures/')))
-    const otherInputDir = 'tmp/otherInput'
-    let otherPaths = readDirRecursive(otherInputDir)
-    otherPaths = Object.fromEntries(otherPaths.map(otherPath => ['Unmanaged/' + otherPath, nodePath.resolve(otherInputDir + '/' + otherPath)]))
+	let pathsToIds = await buildPathsToIds() //map of the cloud path to the cloud object id
+	let pathsOnDisk = transformObj(pathsToIds, entries =>
+		entries
+			.filter(([path, id]) => !path.startsWith('/Pictures/'))
+			.map(([path, id]) => [path, path.replace(/^\/Backup\//, diskPath)])
+	)
+	let pathsInCloud = transformObj(pathsToIds, entries => entries.filter(([path, id]) => path.startsWith('/Pictures/')))
+	const otherInputDir = 'tmp/otherInput'
+	let otherPaths = readDirRecursive(otherInputDir)
+	otherPaths = Object.fromEntries(
+		otherPaths.map(otherPath => ['Unmanaged/' + otherPath, nodePath.resolve(otherInputDir + '/' + otherPath)])
+	)
 
-    if (!useCache) {
-        await download(Object.values(pathsInCloud))
-    }
-    pathsInCloud = transformObj(pathsInCloud, entries => entries.map(([path, id]) => [path,  nodePath.resolve(`tmp/${id}.jpg`)]))
+	if (!useCache) {
+		await download(Object.values(pathsInCloud))
+	}
+	pathsInCloud = transformObj(pathsInCloud, entries =>
+		entries.map(([path, id]) => [path, nodePath.resolve(`tmp/${id}.jpg`)])
+	)
 
-    let allPaths = {
-        ...pathsOnDisk,
-        ...pathsInCloud,
-        ...otherPaths
-    }
-    allPaths = Object.entries(allPaths).map(([referencePath, physicalPath]) => [referencePath, {
-        inputPath: physicalPath,
-        outputPath: outputDir + 'blended-' + referencePath.replace(/(\/|\\|:)/g, '__')
-    }])
-    console.log(JSON.stringify(allPaths, null, 2))
-    console.log(allPaths.length)
-    for ([referencePath, {inputPath, outputPath}] of allPaths) {
-        await convert(referencePath, inputPath, outputPath)
-    }
-    allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
+	let allPaths = {
+		...pathsOnDisk,
+		...pathsInCloud,
+		...otherPaths
+	}
+	allPaths = Object.entries(allPaths).map(([referencePath, physicalPath]) => [
+		referencePath,
+		{
+			inputPath: physicalPath,
+			outputPath: outputDir + 'blended-' + referencePath.replace(/(\/|\\|:)/g, '__')
+		}
+	])
+	console.log(JSON.stringify(allPaths, null, 2))
+	console.log(allPaths.length)
+	for ([referencePath, {inputPath, outputPath}] of allPaths) {
+		await convert(referencePath, inputPath, outputPath)
+	}
+	allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
-    for ([referencePath, outputPath] of allPaths) {
-        await googlePhotos.upload(referencePath, outputPath)
-    }
+	for ([referencePath, outputPath] of allPaths) {
+		await googlePhotos.upload(referencePath, outputPath)
+	}
 
-    await printDebugOutput()
+	await printDebugOutput()
 }
 
 async function main() {
-    try {
-        await googlePhotos.init()
-        await converter.init()
-        await run()
-    } catch (e) {
-        console.error(e)
-    }
-    await converter.close()
+	try {
+		await googlePhotos.init()
+		await converter.init()
+		await run()
+	} catch (e) {
+		console.error(e)
+	}
+	await converter.close()
 }
 
 main()

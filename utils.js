@@ -9,20 +9,20 @@ const mkdir = util.promisify(fs.mkdir)
 const access = util.promisify(fs.access)
 
 async function fileExists(path) {
-    try {
-        await access(path)
-        return true
-    } catch (e) {
-        if (e.code == 'ENOENT') {
-            return false
-        } else {
-            throw e
-        }
-    }
+	try {
+		await access(path)
+		return true
+	} catch (e) {
+		if (e.code == 'ENOENT') {
+			return false
+		} else {
+			throw e
+		}
+	}
 }
 
 async function sleep(seconds) {
-    await setTimeoutPromised(seconds * 1000);
+	await setTimeoutPromised(seconds * 1000)
 }
 
 async function tryWithBackoff(time, max, action, description) {
@@ -42,11 +42,11 @@ async function tryWithBackoff(time, max, action, description) {
 }
 
 module.exports = {
-    readdir,
-    readFile,
-    writeFile,
-    mkdir,
-    fileExists,
-    sleep,
-    tryWithBackoff
+	readdir,
+	readFile,
+	writeFile,
+	mkdir,
+	fileExists,
+	sleep,
+	tryWithBackoff
 }
