@@ -4,7 +4,6 @@ const sharp = require('sharp')
 const textOverlay = require('../text-overlay')
 const {writeExifData} = require('../text-overlay/exif')
 
-
 const width = 1920
 const height = 1080
 
@@ -12,19 +11,20 @@ const margin = 55
 const gap = 15
 
 async function blend(inputPath, outputPath, referencePath) {
-	let inputBuffer = await sharp(inputPath, { failOnError: false }).rotate().withMetadata().toBuffer();
+	let inputBuffer = await sharp(inputPath, {failOnError: false}).rotate().withMetadata().toBuffer()
 	let metadata = await sharp(inputBuffer).metadata()
-	let portrait = (metadata.height / metadata.width) > (height / width)//if landscape but the letterboxes will still be left and right then treat as portrait
+	let portrait = metadata.height / metadata.width > height / width //if landscape but the letterboxes will still be left and right then treat as portrait
 	let backgroundPipeline = sharp(inputBuffer)
-	.blur(40)
-	.resize({
-		width: width,
-		height: height,
-		fit: sharp.fit.cover,
-		position: sharp.strategy.attention
-	}).modulate({
-		brightness: 0.8
-	})
+		.blur(40)
+		.resize({
+			width: width,
+			height: height,
+			fit: sharp.fit.cover,
+			position: sharp.strategy.attention
+		})
+		.modulate({
+			brightness: 0.8
+		})
 	let foregroundResizeOptions = {
 		fit: sharp.fit.inside
 	}
@@ -36,15 +36,15 @@ async function blend(inputPath, outputPath, referencePath) {
 	let foregroundPipeline = sharp(inputBuffer).resize(foregroundResizeOptions).toBuffer()
 
 	let [background, foregroundBuffer] = await Promise.all([backgroundPipeline, foregroundPipeline])
-	
+
 	let overlays = await textOverlay.buildOverlays(inputPath, referencePath)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
 	let exifData = overlays.exifData
 	let bottomHeight = null
-	
+
 	let compositions = [
-		//first put the resized image over the blured background	
+		//first put the resized image over the blured background
 		{
 			input: foregroundBuffer,
 			blend: 'over'
@@ -86,7 +86,8 @@ async function blend(inputPath, outputPath, referencePath) {
 	await writeExifData(outputPath, exifData)
 }
 
-if (!module.parent) { //i.e. if being invoked directly on the command line
+if (!module.parent) {
+	//i.e. if being invoked directly on the command line
 	async function main() {
 		try {
 			await blend('photo-converter/test-resources/input-04-landscape.jpg')
@@ -99,7 +100,7 @@ if (!module.parent) { //i.e. if being invoked directly on the command line
 }
 
 module.exports = {
-    blend,
+	blend,
 	close: textOverlay.close,
 	init: textOverlay.init
 }

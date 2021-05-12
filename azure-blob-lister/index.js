@@ -7,19 +7,19 @@ const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
 //for i in {01..06}; do node azure-blob-lister "[parent]" "Disc$i"; done
 
 const fs = require('fs')
-const {BlobServiceClient} = require("@azure/storage-blob")
+const {BlobServiceClient} = require('@azure/storage-blob')
 const {writeFile, mkdir} = require('../utils')
 
 const outputFolder = 'output/azure-blob-lists'
 
 let blobServiceClient = BlobServiceClient.fromConnectionString(azureConnectionString)
 
-const containerName = "photos-backup";
+const containerName = 'photos-backup'
 
-const containerClient = blobServiceClient.getContainerClient(containerName);
+const containerClient = blobServiceClient.getContainerClient(containerName)
 
 if (process.argv.length != 4) {
-	console.error("Incorrect arguments given")
+	console.error('Incorrect arguments given')
 	process.exit(1)
 }
 
@@ -47,8 +47,8 @@ async function main() {
 	}
 	//force file to be (re)created as utf-8
 	await writeFile(filename, '', 'utf8')
-	let stream = fs.createWriteStream(filename, { flags: 'a' });
-	let blobs = await containerClient.listBlobsFlat(options);
+	let stream = fs.createWriteStream(filename, {flags: 'a'})
+	let blobs = await containerClient.listBlobsFlat(options)
 	for await (const blob of blobs) {
 		let name = blob.name
 		if (!name.endsWith('/Thumbs.db')) {
@@ -57,10 +57,10 @@ async function main() {
 				name = name.substring(parentFolderLength)
 			}
 			let line = `${md5}  ${name}\n`
-			stream.write(line);
+			stream.write(line)
 		}
 	}
-	stream.end();
+	stream.end()
 }
 
-main();
+main()
