@@ -52,24 +52,28 @@ async function createAlbums() {
 }
 
 async function createAlbum(albumTitle) {
-	let oauthToken = await getOauthToken()
-	let url = 'https://photoslibrary.googleapis.com/v1/albums'
-	let contentType = 'application/json'
-	let body = JSON.stringify(
-		{
-			album: {
-				title: albumTitle
-			}
-		},
-		null,
-		2
-	)
-	try {
-		await makeRequest('POST', url, body, contentType, oauthToken)
-		console.log(`Created album ${albumTitle}`)
-	} catch (e) {
-		console.log(`Failed creating album ${albumTitle}`)
-		throw e
+	let albums = await getPossibleAlbums(albumTitle)
+	//check if album already exists
+	if (albums.length == 0) {
+		let oauthToken = await getOauthToken()
+		let url = 'https://photoslibrary.googleapis.com/v1/albums'
+		let contentType = 'application/json'
+		let body = JSON.stringify(
+			{
+				album: {
+					title: albumTitle
+				}
+			},
+			null,
+			2
+		)
+		try {
+			await makeRequest('POST', url, body, contentType, oauthToken)
+			console.log(`Created album ${albumTitle}`)
+		} catch (e) {
+			console.log(`Failed creating album ${albumTitle}`)
+			throw e
+		}
 	}
 }
 
@@ -78,6 +82,22 @@ async function getUploadAlbumId() {
 }
 
 async function getAlbumId(albumTitle) {
+	try {
+		let albums = await getPossibleAlbums(albumTitle)
+		if (albums.length != 0) {
+			let albumId = album[0].id
+			console.log(`Fetched album id for ${albumTitle}`)
+			return albumId
+		} else {
+			throw new Error(`Failed fetching album id for ${albumTitle}`)
+		}
+	} catch (e) {
+		console.log(`Failed fetching album id for ${albumTitle}`)
+		throw e
+	}
+}
+
+async function getPossibleAlbums(albumTitle) {
 	const oauthToken = await getOauthToken()
 	const baseUrl = 'https://photoslibrary.googleapis.com/v1/albums?pageSize=50'
 	const contentType = null
@@ -90,10 +110,8 @@ async function getAlbumId(albumTitle) {
 			albums = albums.concat(response.albums)
 			return response
 		})
-		let album = albums.filter(album => album != null && album.title == albumTitle)
-		let albumId = album[0].id
-		console.log(`Fetched album id for ${albumTitle}`)
-		return albumId
+		albums = albums.filter(album => album != null && album.title == albumTitle)
+		return albums
 	} catch (e) {
 		console.log(`Failed fetching album id for ${albumTitle}`)
 		throw e
