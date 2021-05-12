@@ -83,6 +83,8 @@ async function run() {
 	}
 	allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
+	let referencePaths = allPaths.map(path => path[0])
+	googlePhotos.deletePhotos(referencePaths)
 	for ([referencePath, outputPath] of allPaths) {
 		await googlePhotos.upload(referencePath, outputPath)
 	}

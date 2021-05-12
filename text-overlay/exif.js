@@ -24,7 +24,7 @@ async function getDataFromExif(realPath, referencePath) {
 			let year = `${datePart[0]}${datePart[1]}${datePart[2]}${datePart[3]}`
 			let month = `${datePart[4]}${datePart[5]}`
 			let day = `${datePart[6]}${datePart[7]}`
-			day = `${year}:${month}:${day}`
+			datePart = `${year}:${month}:${day}`
 			time = matches[3]
 			if (time != null) {
 				time = `${time[0]}${time[1]}:${time[2]}${time[3]}:${time[4]}${time[5]}`
@@ -32,7 +32,7 @@ async function getDataFromExif(realPath, referencePath) {
 				time = '12:00:00'
 			}
 			//format is 2021:05:03 09:34:24 - the time is mandatory (that's why it's called Date*Time*Original)
-			dateTimeOriginal = `${day} ${time}`
+			dateTimeOriginal = `${datePart} ${time}`
 			date = `${day}/${month}/${year}?`
 		}
 	}
