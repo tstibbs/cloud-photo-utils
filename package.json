@@ -1,13 +1,23 @@
 {
-  "dependencies": {
-    "@azure/storage-blob": "^12.2.1",
-    "axios": "^0.21.1",
-    "dotenv": "^8.2.0",
-    "exiftool-vendored": "^14.3.0",
-    "fs-readdir-recursive": "^1.1.0",
-    "googleapis": "^61.0.0",
-    "request": "^2.88.2",
-    "sharp": "^0.26.2",
-    "text2png": "^2.3.0"
-  }
+	"dependencies": {
+		"@azure/storage-blob": "^12.2.1",
+		"axios": "^0.21.1",
+		"dotenv": "^8.2.0",
+		"exiftool-vendored": "^14.3.0",
+		"fs-readdir-recursive": "^1.1.0",
+		"googleapis": "^61.0.0",
+		"request": "^2.88.2",
+		"sharp": "^0.26.2",
+		"text2png": "^2.3.0"
+	},
+	"devDependencies": {
+		"husky": "^4.3.8",
+		"lint-staged": "^11.0.0",
+		"prettier": "^2.3.0"
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "lint-staged"
+		}
+	}
 }
