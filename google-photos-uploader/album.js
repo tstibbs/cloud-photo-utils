@@ -1,26 +1,14 @@
 require('dotenv').config()
+const _ = require('underscore')
 const {getOauthToken, makeRequest} = require('./core')
 
 const stagingAlbumTitle = process.env.google_staging_album_title //must be the title of an album created through this app
 const deleteAlbumTitle = process.env.google_delete_album_title //must be the title of an album created through this app
 
-let fullPhotosList = null // should be initialised in init
 let deleteAlbumId = null // should be initialised in init
 
 async function init() {
-	fullPhotosList = await fetchCurrentPhotosList()
 	deleteAlbumId = await getAlbumId(deleteAlbumTitle)
-}
-
-async function fetchCurrentPhotosList() {
-	let oauthToken = await getOauthToken()
-	let url = ''
-	try {
-		await makeRequest('GET', url, null, contentType, oauthToken)
-	} catch (e) {
-		console.log(`Failed listing current photos`)
-		throw e
-	}
 }
 
 async function fetchCurrentPhotosList() {
@@ -31,7 +19,7 @@ async function fetchCurrentPhotosList() {
 	try {
 		let mediaItems = []
 		await page(baseUrl, async url => {
-			let rawResponse = await makeRequest('GET', url, body, contentType, oauthToken)
+			let rawResponse = await makeRequest('fetching current photos list', 'GET', url, body, contentType, oauthToken)
 			let response = JSON.parse(rawResponse)
 			if (response.mediaItems != null) {
 				mediaItems = mediaItems.concat(...response.mediaItems)
@@ -68,7 +56,7 @@ async function createAlbum(albumTitle) {
 			2
 		)
 		try {
-			await makeRequest('POST', url, body, contentType, oauthToken)
+			await makeRequest(`creating album ${albumTitle}`, 'POST', url, body, contentType, oauthToken)
 			console.log(`Created album ${albumTitle}`)
 		} catch (e) {
 			console.log(`Failed creating album ${albumTitle}`)
@@ -85,7 +73,7 @@ async function getAlbumId(albumTitle) {
 	try {
 		let albums = await getPossibleAlbums(albumTitle)
 		if (albums.length != 0) {
-			let albumId = album[0].id
+			let albumId = albums[0].id
 			console.log(`Fetched album id for ${albumTitle}`)
 			return albumId
 		} else {
@@ -105,7 +93,14 @@ async function getPossibleAlbums(albumTitle) {
 	try {
 		let albums = []
 		await page(baseUrl, async url => {
-			let rawResponse = await makeRequest('GET', url, body, contentType, oauthToken)
+			let rawResponse = await makeRequest(
+				`fetching album ids for ${albumTitle}`,
+				'GET',
+				url,
+				body,
+				contentType,
+				oauthToken
+			)
 			let response = JSON.parse(rawResponse)
 			albums = albums.concat(response.albums)
 			return response
@@ -119,6 +114,7 @@ async function getPossibleAlbums(albumTitle) {
 }
 
 async function deletePhotos(referencePaths) {
+	const fullPhotosList = await fetchCurrentPhotosList()
 	const mediaItemIds = referencePaths.map(referencePath => fullPhotosList[referencePath]).filter(id => id != null)
 	if (mediaItemIds.length != referencePaths.length) {
 		console.log(
@@ -128,23 +124,26 @@ async function deletePhotos(referencePaths) {
 				referencePaths.length - mediaItemIds.length
 			} new photos).`
 		)
+		console.log('referencePaths')
+		console.log(JSON.stringify(referencePaths))
+		console.log('fullPhotosList')
+		console.log(JSON.stringify(fullPhotosList))
 	}
 	if (mediaItemIds.length > 0) {
+		const chunks = _.chunk(mediaItemIds, 2)
 		let oauthToken = await getOauthToken()
 		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchAddMediaItems`
 		let contentType = 'application/json'
-		let body = JSON.stringify(
-			{
-				mediaItemIds: mediaItemIds
-			},
-			null,
-			2
-		)
-		try {
-			await makeRequest('POST', url, body, contentType, oauthToken)
-		} catch (e) {
-			console.log(`Failed adding item to delete album ${albumTitle}`)
-			throw e
+		for (chunk of chunks) {
+			let body = JSON.stringify({
+				mediaItemIds: chunk
+			})
+			try {
+				await makeRequest(`adding deleted items to ${deleteAlbumId}`, 'POST', url, body, contentType, oauthToken)
+			} catch (e) {
+				console.log(`Failed adding item to delete album ${deleteAlbumId}`)
+				throw e
+			}
 		}
 	} else {
 		console.log(`None of the reference paths found in existing photos list.`)

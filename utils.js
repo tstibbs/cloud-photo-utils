@@ -27,14 +27,14 @@ async function sleep(seconds) {
 
 async function tryWithBackoff(time, max, action, description) {
 	try {
-		await action()
+		return await action()
 	} catch (e) {
 		console.error(e)
 		console.error(`Failed ${description}, sleeping ${time}s then retrying`)
 		await sleep(time)
 		let nextTime = time * 2
 		if (nextTime <= max) {
-			tryWithBackoff(nextTime, max, action, description)
+			return await tryWithBackoff(nextTime, max, action, description)
 		} else {
 			throw e
 		}

@@ -84,7 +84,7 @@ async function run() {
 	allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
 	let referencePaths = allPaths.map(path => path[0])
-	googlePhotos.deletePhotos(referencePaths)
+	await googlePhotos.deletePhotos(referencePaths)
 	for ([referencePath, outputPath] of allPaths) {
 		await googlePhotos.upload(referencePath, outputPath)
 	}
@@ -93,14 +93,19 @@ async function run() {
 }
 
 async function main() {
+	let error = false
 	try {
 		await googlePhotos.init()
 		await converter.init()
 		await run()
 	} catch (e) {
 		console.error(e)
+		error = false
 	}
 	await converter.close()
+	if (error) {
+		process.exit(1)
+	}
 }
 
 main()

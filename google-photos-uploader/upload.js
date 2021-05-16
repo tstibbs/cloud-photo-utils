@@ -3,7 +3,6 @@ const fs = require('fs')
 
 const {getOauthToken, makeRequest} = require('./core')
 const {getUploadAlbumId} = require('./album')
-const {tryWithBackoff} = require('../utils')
 
 let albumId = 'not populated yet'
 
@@ -14,14 +13,7 @@ async function init() {
 async function upload(referencePath, filePath) {
 	let oauthToken = await getOauthToken()
 	let uploadToken = await uploadContents(oauthToken, referencePath, filePath)
-	await tryWithBackoff(
-		30,
-		300,
-		async () => {
-			await registerUpload(oauthToken, uploadToken, referencePath)
-		},
-		'during upload'
-	)
+	await registerUpload(oauthToken, uploadToken, referencePath)
 }
 
 async function uploadContents(oauthToken, referencePath, filePath) {
@@ -73,7 +65,7 @@ async function registerUpload(oauthToken, uploadToken, referencePath) {
 		2
 	)
 	try {
-		await makeRequest('POST', url, body, contentType, oauthToken)
+		await makeRequest(`registering upload`, 'POST', url, body, contentType, oauthToken)
 		console.log(`Uploaded ${referencePath}`)
 	} catch (e) {
 		console.log(`Failed uploading ${referencePath}`)

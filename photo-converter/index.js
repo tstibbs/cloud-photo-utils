@@ -81,7 +81,6 @@ async function blend(inputPath, outputPath, referencePath) {
 
 	let outputPipeline = background.composite(compositions)
 	let info = await outputPipeline.toFile(outputPath)
-	console.log(info)
 	//write the exif back to the converted file for reference
 	await writeExifData(outputPath, exifData)
 }

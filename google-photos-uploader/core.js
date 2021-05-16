@@ -6,10 +6,11 @@ const google_client_secret = process.env.google_client_secret
 //=====================================================
 const {google} = require('googleapis')
 const request = require('request')
-const {readFile, writeFile} = require('../utils')
+const {readFile, writeFile, tryWithBackoff} = require('../utils')
 const SCOPES = [
 	'https://www.googleapis.com/auth/photoslibrary.appendonly',
-	'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata'
+	'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata',
+	'https://www.googleapis.com/auth/photoslibrary.readonly'
 ]
 
 const credentials = {
@@ -65,31 +66,42 @@ async function getOauthToken() {
 	return auth.access_token
 }
 
-async function makeRequest(method, url, requestBody, contentType, oauthToken) {
+async function makeRawRequest(requestProps) {
+	return new Promise(function (resolve, reject) {
+		request(requestProps, (error, response, body) => {
+			if (!error && response.statusCode == 200) {
+				resolve(body)
+			} else {
+				console.error(body)
+				reject(error)
+			}
+		})
+	})
+}
+
+async function makeRequest(description, method, url, requestBody, contentType, oauthToken) {
 	let headers = {
 		Authorization: `Bearer ${oauthToken}`
 	}
 	if (contentType != null) {
 		headers['Content-type'] = contentType
 	}
-	return new Promise(function (resolve, reject) {
-		request(
-			{
-				method,
-				uri: url,
-				headers: headers,
-				body: requestBody
-			},
-			(error, response, body) => {
-				if (!error && response.statusCode == 200) {
-					resolve(body)
-				} else {
-					console.error(body)
-					reject(error)
-				}
-			}
-		)
-	})
+	let requestProps = {
+		method,
+		uri: url,
+		headers: headers
+	}
+	if (requestBody != null) {
+		requestProps.body = requestBody
+	}
+	return await tryWithBackoff(
+		30,
+		300,
+		async () => {
+			return await makeRawRequest(requestProps)
+		},
+		description
+	)
 }
 
 module.exports = {
