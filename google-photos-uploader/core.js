@@ -7,11 +7,7 @@ const google_client_secret = process.env.google_client_secret
 const {google} = require('googleapis')
 const request = require('request')
 const {readFile, writeFile, tryWithBackoff} = require('../utils')
-const SCOPES = [
-	'https://www.googleapis.com/auth/photoslibrary.appendonly',
-	'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata',
-	'https://www.googleapis.com/auth/photoslibrary.readonly'
-]
+const SCOPES = ['https://www.googleapis.com/auth/photoslibrary']
 
 const credentials = {
 	installed: {
@@ -94,7 +90,7 @@ async function makeRequest(description, method, url, requestBody, contentType, o
 	if (requestBody != null) {
 		requestProps.body = requestBody
 	}
-	return await tryWithBackoff(
+	let rawResponse = await tryWithBackoff(
 		30,
 		300,
 		async () => {
@@ -102,6 +98,11 @@ async function makeRequest(description, method, url, requestBody, contentType, o
 		},
 		description
 	)
+	if (rawResponse != null && rawResponse.length > 0) {
+		return JSON.parse(rawResponse)
+	} else {
+		return rawResponse
+	}
 }
 
 module.exports = {

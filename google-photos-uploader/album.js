@@ -19,8 +19,7 @@ async function fetchCurrentPhotosList() {
 	try {
 		let mediaItems = []
 		await page(baseUrl, async url => {
-			let rawResponse = await makeRequest('fetching current photos list', 'GET', url, body, contentType, oauthToken)
-			let response = JSON.parse(rawResponse)
+			let response = await makeRequest('fetching current photos list', 'GET', url, body, contentType, oauthToken)
 			if (response.mediaItems != null) {
 				mediaItems = mediaItems.concat(...response.mediaItems)
 			}
@@ -93,7 +92,7 @@ async function getPossibleAlbums(albumTitle) {
 	try {
 		let albums = []
 		await page(baseUrl, async url => {
-			let rawResponse = await makeRequest(
+			let response = await makeRequest(
 				`fetching album ids for ${albumTitle}`,
 				'GET',
 				url,
@@ -101,7 +100,6 @@ async function getPossibleAlbums(albumTitle) {
 				contentType,
 				oauthToken
 			)
-			let response = JSON.parse(rawResponse)
 			albums = albums.concat(response.albums)
 			return response
 		})
@@ -130,7 +128,7 @@ async function deletePhotos(referencePaths) {
 		console.log(JSON.stringify(fullPhotosList))
 	}
 	if (mediaItemIds.length > 0) {
-		const chunks = _.chunk(mediaItemIds, 2)
+		const chunks = _.chunk(mediaItemIds, 50)
 		let oauthToken = await getOauthToken()
 		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchAddMediaItems`
 		let contentType = 'application/json'
@@ -142,6 +140,32 @@ async function deletePhotos(referencePaths) {
 				await makeRequest(`adding deleted items to ${deleteAlbumId}`, 'POST', url, body, contentType, oauthToken)
 			} catch (e) {
 				console.log(`Failed adding item to delete album ${deleteAlbumId}`)
+				throw e
+			}
+		}
+	} else {
+		console.log(`None of the reference paths found in existing photos list.`)
+	}
+	return mediaItemIds
+}
+
+async function cancelDeletes(uploadedIds) {
+	//if the item to be uploaded is literally identical to a previous item then it won't upload a new one,
+	// - so the item will appear in both staging and delete
+	// - so if you then delete everything in the delete album then you'll delete some things that have in theory just been uploaded
+	if (uploadedIds.length > 0) {
+		const chunks = _.chunk(uploadedIds, 50)
+		let oauthToken = await getOauthToken()
+		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchRemoveMediaItems`
+		let contentType = 'application/json'
+		for (chunk of chunks) {
+			let body = JSON.stringify({
+				mediaItemIds: chunk
+			})
+			try {
+				await makeRequest(`removing deleted items from ${deleteAlbumId}`, 'POST', url, body, contentType, oauthToken)
+			} catch (e) {
+				console.log(`Failed removing item from album ${deleteAlbumId}`)
 				throw e
 			}
 		}
@@ -163,4 +187,4 @@ async function page(baseUrl, delegate) {
 	} while (nextToken != null)
 }
 
-module.exports = {getUploadAlbumId, createAlbums, init, deletePhotos}
+module.exports = {getUploadAlbumId, createAlbums, init, deletePhotos, cancelDeletes}
