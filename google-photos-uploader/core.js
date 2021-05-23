@@ -1,12 +1,15 @@
-require('dotenv').config()
+import 'dotenv/config'
+import request from 'request'
+import googleapis from 'googleapis'
+
+import {readFile, writeFile, tryWithBackoff} from '../utils.js'
+
+const {google} = googleapis
 const google_client_id = process.env.google_client_id
 const google_project_id = process.env.google_project_id
 const google_client_secret = process.env.google_client_secret
 
 //=====================================================
-const {google} = require('googleapis')
-const request = require('request')
-const {readFile, writeFile, tryWithBackoff} = require('../utils')
 const SCOPES = ['https://www.googleapis.com/auth/photoslibrary']
 
 const credentials = {
@@ -63,7 +66,7 @@ async function getOauthToken() {
 }
 
 async function makeRawRequest(requestProps) {
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		request(requestProps, (error, response, body) => {
 			if (!error && response.statusCode == 200) {
 				resolve(body)
@@ -90,14 +93,7 @@ async function makeRequest(description, method, url, requestBody, contentType, o
 	if (requestBody != null) {
 		requestProps.body = requestBody
 	}
-	let rawResponse = await tryWithBackoff(
-		30,
-		300,
-		async () => {
-			return await makeRawRequest(requestProps)
-		},
-		description
-	)
+	let rawResponse = await tryWithBackoff(30, 300, async () => await makeRawRequest(requestProps), description)
 	if (rawResponse != null && rawResponse.length > 0) {
 		return JSON.parse(rawResponse)
 	} else {
@@ -105,9 +101,4 @@ async function makeRequest(description, method, url, requestBody, contentType, o
 	}
 }
 
-module.exports = {
-	buildAuthUrl,
-	handleToken,
-	getOauthToken,
-	makeRequest
-}
+export {buildAuthUrl, handleToken, getOauthToken, makeRequest}

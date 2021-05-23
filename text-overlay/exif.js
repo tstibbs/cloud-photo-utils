@@ -1,4 +1,5 @@
-const exiftool = require('exiftool-vendored').exiftool
+import exiftoolVendored from 'exiftool-vendored'
+const {exiftool} = exiftoolVendored
 
 async function getDataFromExif(realPath, referencePath) {
 	let tags = await exiftool.read(realPath)
@@ -56,8 +57,4 @@ async function close() {
 	await exiftool.end()
 }
 
-module.exports = {
-	getDataFromExif,
-	writeExifData,
-	close
-}
+export {getDataFromExif, writeExifData, close}

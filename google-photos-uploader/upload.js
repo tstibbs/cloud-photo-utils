@@ -1,9 +1,9 @@
-const request = require('request')
-const fs = require('fs')
-const _ = require('underscore')
+import request from 'request'
+import fs from 'fs'
+import _ from 'underscore'
 
-const {getOauthToken, makeRequest} = require('./core')
-const {getUploadAlbumId, deletePhotos, cancelDeletes} = require('./album')
+import {getOauthToken, makeRequest} from './core.js'
+import {getUploadAlbumId, deletePhotos, cancelDeletes} from './album.js'
 
 let albumId = 'not populated yet'
 
@@ -16,7 +16,7 @@ async function upload(paths) {
 	let referencePaths = paths.map(path => path[0])
 	let deletedMediaItemIds = await deletePhotos(referencePaths)
 	let uploads = []
-	for ([referencePath, outputPath] of paths) {
+	for (let [referencePath, outputPath] of paths) {
 		let uploadToken = await uploadContents(oauthToken, referencePath, outputPath)
 		uploads.push({referencePath, uploadToken})
 	}
@@ -26,7 +26,7 @@ async function upload(paths) {
 }
 
 async function uploadContents(oauthToken, referencePath, filePath) {
-	let uploadToken = await new Promise(function (resolve, reject) {
+	let uploadToken = await new Promise((resolve, reject) => {
 		let input = fs.createReadStream(filePath)
 		let output = request.post(
 			'https://photoslibrary.googleapis.com/v1/uploads',
@@ -58,17 +58,15 @@ async function uploadContents(oauthToken, referencePath, filePath) {
 async function registerUploads(oauthToken, paths) {
 	let url = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate'
 	let contentType = 'application/json'
-	let mediaItems = paths.map(path => {
-		return {
-			simpleMediaItem: {
-				uploadToken: path.uploadToken,
-				fileName: path.referencePath
-			}
+	let mediaItems = paths.map(path => ({
+		simpleMediaItem: {
+			uploadToken: path.uploadToken,
+			fileName: path.referencePath
 		}
-	})
+	}))
 	const chunks = _.chunk(mediaItems, 50)
 	let uploadedIds = []
-	for (chunk of chunks) {
+	for (const chunk of chunks) {
 		let body = JSON.stringify({
 			albumId: albumId,
 			newMediaItems: chunk
@@ -87,4 +85,4 @@ async function registerUploads(oauthToken, paths) {
 	return uploadedIds
 }
 
-module.exports = {upload, init}
+export {upload, init}

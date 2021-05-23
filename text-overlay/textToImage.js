@@ -1,4 +1,5 @@
-const text2png = require('text2png')
+import text2png from 'text2png'
+
 const dataTextSize = 50
 const locationTextSize = 24
 
@@ -26,6 +27,4 @@ function buildImage(date, locationDescriptor) {
 	}
 }
 
-module.exports = {
-	buildImage
-}
+export {buildImage}

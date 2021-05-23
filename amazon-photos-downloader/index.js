@@ -1,13 +1,15 @@
-require('dotenv').config()
+import 'dotenv/config'
+import esMain from 'es-main'
+import assert from 'assert'
+import axios from 'axios'
+
+import {writeFile} from '../utils.js'
+
 const folder = process.env.amazon_folder
 const sessionid = process.env.amazon_session_id
 const cookie = process.env.amazon_cookie
 
 //=====================================================
-
-const assert = require('assert')
-const axios = require('axios')
-const {writeFile} = require('../utils')
 
 const axiosInstance = axios.create({
 	baseURL: 'https://www.amazon.co.uk/drive/v1/',
@@ -137,14 +139,11 @@ async function download(ids) {
 	await Promise.all(writePromises)
 }
 
-if (!module.parent) {
+if (esMain(import.meta)) {
 	//i.e. if being invoked directly on the command line
 	listPaths().then(paths => {
 		console.log(JSON.stringify(paths, null, 2))
 	})
 }
 
-module.exports = {
-	listPaths,
-	download
-}
+export {listPaths, download}

@@ -1,4 +1,4 @@
-const fs = require('fs')
+import fs from 'fs'
 
 const fileDetails = []
 
@@ -53,7 +53,4 @@ async function printDebugOutput() {
 	fileStream.end()
 }
 
-module.exports = {
-	storeGeoDetails,
-	printDebugOutput
-}
+export {storeGeoDetails, printDebugOutput}

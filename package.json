@@ -1,8 +1,13 @@
 {
+	"name": "@tstibbs/cloud-photo-utils",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
 	"dependencies": {
 		"@azure/storage-blob": "^12.2.1",
 		"axios": "^0.21.1",
 		"dotenv": "^8.2.0",
+		"es-main": "^1.0.2",
 		"exiftool-vendored": "^14.3.0",
 		"fs-readdir-recursive": "^1.1.0",
 		"googleapis": "^61.0.0",

@@ -1,5 +1,5 @@
-const axios = require('axios')
-const {readFile, writeFile, fileExists} = require('../utils')
+import axios from 'axios'
+import {readFile, writeFile, fileExists} from '../utils.js'
 
 const useCache = process.env.use_cache == 'true'
 const cachePath = 'tmp/geocodingCache.json'
@@ -128,9 +128,4 @@ async function buildDescriptor(lat, lng) {
 	return descriptorAndDetails
 }
 
-module.exports = {
-	buildDescriptor,
-	chooseFields,
-	init,
-	close
-}
+export {buildDescriptor, chooseFields, init, close}

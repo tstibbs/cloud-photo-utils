@@ -1,15 +1,15 @@
-const exif = require('./exif.js')
-const geocoding = require('./geocoding.js')
-const {buildImage} = require('./textToImage.js')
-const {storeGeoDetails} = require('../debug-printer.js')
+import {close as exifClose, getDataFromExif} from './exif.js'
+import {init, close as geocodingClose, buildDescriptor} from './geocoding.js'
+import {buildImage} from './textToImage.js'
+import {storeGeoDetails} from '../debug-printer.js'
 
 async function buildOverlays(realPath, referencePath) {
-	let exifData = await exif.getDataFromExif(realPath, referencePath)
+	let exifData = await getDataFromExif(realPath, referencePath)
 	let {lat, lng, date} = exifData
 	let locationDescriptor = null
 	let details = null
 	if (lat != null && lng != null) {
-		details = await geocoding.buildDescriptor(lat, lng)
+		details = await buildDescriptor(lat, lng)
 		locationDescriptor = details.descriptor
 	}
 	storeGeoDetails(realPath, details)
@@ -18,12 +18,8 @@ async function buildOverlays(realPath, referencePath) {
 }
 
 async function close() {
-	await exif.close()
-	await geocoding.close()
+	await exifClose()
+	await geocodingClose()
 }
 
-module.exports = {
-	buildOverlays,
-	init: geocoding.init,
-	close
-}
+export {buildOverlays, close, init}

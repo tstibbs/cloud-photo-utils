@@ -1,20 +1,19 @@
-require('dotenv').config()
+import 'dotenv/config'
+import nodePath from 'path'
+import readDirRecursive from 'fs-readdir-recursive'
+
+import {readFile, writeFile} from './utils.js'
+import {listPaths, download} from './amazon-photos-downloader/index.js'
+import {blend, close as converterClose, init as converterInit} from './photo-converter/index.js'
+import {upload, init as googleInit} from './google-photos-uploader/index.js'
+import {printDebugOutput} from './debug-printer.js'
+import {buildOverlays} from './text-overlay/index.js'
+
 const diskPath = process.env.disk_path
 const useCache = process.env.use_cache == 'true'
 const debugOnly = process.env.debugOnly == 'false'
 
 //=====================================================
-
-const nodePath = require('path')
-
-const readDirRecursive = require('fs-readdir-recursive')
-
-const {readFile, writeFile} = require('./utils')
-const {listPaths, download} = require('./amazon-photos-downloader')
-const converter = require('./photo-converter')
-const googlePhotos = require('./google-photos-uploader')
-const {printDebugOutput} = require('./debug-printer.js')
-const {buildOverlays} = require('./text-overlay')
 
 let outputDir = 'output/converted-photos/'
 
@@ -33,7 +32,7 @@ async function buildPathsToIds() {
 async function convert(referencePath, inputPath, outputPath) {
 	console.log(`Converting ${referencePath}`)
 	if (!debugOnly) {
-		await converter.blend(inputPath, outputPath, referencePath)
+		await blend(inputPath, outputPath, referencePath)
 	} else {
 		await buildOverlays(inputPath, referencePath)
 	}
@@ -78,12 +77,12 @@ async function run() {
 	])
 	console.log(JSON.stringify(allPaths, null, 2))
 	console.log(allPaths.length)
-	for ([referencePath, {inputPath, outputPath}] of allPaths) {
+	for (const [referencePath, {inputPath, outputPath}] of allPaths) {
 		await convert(referencePath, inputPath, outputPath)
 	}
 	allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])
 
-	await googlePhotos.upload(allPaths)
+	await upload(allPaths)
 
 	await printDebugOutput()
 }
@@ -91,14 +90,14 @@ async function run() {
 async function main() {
 	let error = false
 	try {
-		await googlePhotos.init()
-		await converter.init()
+		await googleInit()
+		await converterInit()
 		await run()
 	} catch (e) {
 		console.error(e)
 		error = false
 	}
-	await converter.close()
+	await converterClose()
 	if (error) {
 		process.exit(1)
 	}

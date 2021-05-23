@@ -1,8 +1,10 @@
-const {buildAuthUrl, handleToken} = require('./core')
-const {upload, init: uploadInit} = require('./upload')
-const {createAlbums, init: albumInit, deletePhotos} = require('./album')
+import esMain from 'es-main'
 
-if (!module.parent) {
+import {buildAuthUrl, handleToken} from './core.js'
+import {upload, init as uploadInit} from './upload.js'
+import {createAlbums, init as albumInit, deletePhotos} from './album.js'
+
+if (esMain(import.meta)) {
 	//i.e. if being invoked directly on the command line
 	let allArgs = process.argv.slice(2)
 	if (allArgs.length == 1 && allArgs[0] == 'login') {
@@ -29,8 +31,4 @@ async function init() {
 	await albumInit()
 }
 
-module.exports = {
-	init,
-	upload,
-	deletePhotos
-}
+export {init, upload, deletePhotos}

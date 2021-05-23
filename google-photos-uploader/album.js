@@ -1,6 +1,7 @@
-require('dotenv').config()
-const _ = require('underscore')
-const {getOauthToken, makeRequest} = require('./core')
+import 'dotenv/config'
+import _ from 'underscore'
+
+import {getOauthToken, makeRequest} from './core.js'
 
 const stagingAlbumTitle = process.env.google_staging_album_title //must be the title of an album created through this app
 const deleteAlbumTitle = process.env.google_delete_album_title //must be the title of an album created through this app
@@ -132,7 +133,7 @@ async function deletePhotos(referencePaths) {
 		let oauthToken = await getOauthToken()
 		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchAddMediaItems`
 		let contentType = 'application/json'
-		for (chunk of chunks) {
+		for (const chunk of chunks) {
 			let body = JSON.stringify({
 				mediaItemIds: chunk
 			})
@@ -158,7 +159,7 @@ async function cancelDeletes(uploadedIds) {
 		let oauthToken = await getOauthToken()
 		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchRemoveMediaItems`
 		let contentType = 'application/json'
-		for (chunk of chunks) {
+		for (const chunk of chunks) {
 			let body = JSON.stringify({
 				mediaItemIds: chunk
 			})
@@ -187,4 +188,4 @@ async function page(baseUrl, delegate) {
 	} while (nextToken != null)
 }
 
-module.exports = {getUploadAlbumId, createAlbums, init, deletePhotos, cancelDeletes}
+export {getUploadAlbumId, createAlbums, init, deletePhotos, cancelDeletes}

@@ -1,8 +1,8 @@
-//TODO maybe piexifjs would allow us to read/copy over the exif tags?
+import esMain from 'es-main'
+import sharp from 'sharp'
 
-const sharp = require('sharp')
-const textOverlay = require('../text-overlay')
-const {writeExifData} = require('../text-overlay/exif')
+import {buildOverlays, close, init} from '../text-overlay/index.js'
+import {writeExifData} from '../text-overlay/exif.js'
 
 const width = 1920
 const height = 1080
@@ -37,7 +37,7 @@ async function blend(inputPath, outputPath, referencePath) {
 
 	let [background, foregroundBuffer] = await Promise.all([backgroundPipeline, foregroundPipeline])
 
-	let overlays = await textOverlay.buildOverlays(inputPath, referencePath)
+	let overlays = await buildOverlays(inputPath, referencePath)
 	let topOverlay = overlays.top
 	let bottomOverlay = overlays.bottom
 	let exifData = overlays.exifData
@@ -85,7 +85,7 @@ async function blend(inputPath, outputPath, referencePath) {
 	await writeExifData(outputPath, exifData)
 }
 
-if (!module.parent) {
+if (esMain(import.meta)) {
 	//i.e. if being invoked directly on the command line
 	async function main() {
 		try {
@@ -98,8 +98,4 @@ if (!module.parent) {
 	main()
 }
 
-module.exports = {
-	blend,
-	close: textOverlay.close,
-	init: textOverlay.init
-}
+export {blend, close, init}

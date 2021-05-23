@@ -1,14 +1,15 @@
-require('dotenv').config()
+import 'dotenv/config'
+import fs from 'fs'
+import {BlobServiceClient} from '@azure/storage-blob'
+
+import {writeFile, mkdir} from '../utils.js'
+
 const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
 
 //=====================================================
 
 //may want to invoke with something like:
 //for i in {01..06}; do node azure-blob-lister "[parent]" "Disc$i"; done
-
-const fs = require('fs')
-const {BlobServiceClient} = require('@azure/storage-blob')
-const {writeFile, mkdir} = require('../utils')
 
 const outputFolder = 'output/azure-blob-lists'
 

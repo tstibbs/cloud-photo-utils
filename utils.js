@@ -1,5 +1,5 @@
-const fs = require('fs')
-const util = require('util')
+import fs from 'fs'
+import util from 'util'
 
 const setTimeoutPromised = util.promisify(setTimeout)
 const readdir = util.promisify(fs.readdir)
@@ -41,12 +41,4 @@ async function tryWithBackoff(time, max, action, description) {
 	}
 }
 
-module.exports = {
-	readdir,
-	readFile,
-	writeFile,
-	mkdir,
-	fileExists,
-	sleep,
-	tryWithBackoff
-}
+export {readdir, readFile, writeFile, mkdir, fileExists, sleep, tryWithBackoff}
