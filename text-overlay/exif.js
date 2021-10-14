@@ -26,7 +26,7 @@ async function getDataFromExif(realPath, referencePath) {
 			let month = `${datePart[4]}${datePart[5]}`
 			let day = `${datePart[6]}${datePart[7]}`
 			datePart = `${year}:${month}:${day}`
-			time = matches[3]
+			let time = matches[3]
 			if (time != null) {
 				time = `${time[0]}${time[1]}:${time[2]}${time[3]}:${time[4]}${time[5]}`
 			} else {
