@@ -1,0 +1,3 @@
+#paste these into vscode's replace boxes, given a list of filenames, to get commands to fix up whatsapp videos that have their date set to 0
+VID-(\d{4})(\d\d)(\d\d)-.+[.]mp4
+exiftool -QuickTime:CreateDate="$1:$2:$3 12:00:00" -QuickTime:ModifyDate="$1:$2:$3 12:00:00" -*MediaCreateDate="$1:$2:$3 12:00:00" -*MediaModifyDate="$1:$2:$3 12:00:00" -*TrackCreateDate="$1:$2:$3 12:00:00" -*TrackModifyDate="$1:$2:$3 12:00:00" $0
