@@ -9,13 +9,13 @@ const azureConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
 //=====================================================
 
 //may want to invoke with something like:
-//for i in {01..06}; do node azure-blob-lister "[parent]" "Disc$i"; done
+//for i in {01..06}; do node azure/blob-lister "[parent]" "Disc$i"; done
 
 const outputFolder = 'output/azure-blob-lists'
 
 let blobServiceClient = BlobServiceClient.fromConnectionString(azureConnectionString)
 
-const containerName = 'photos-backup'
+const containerName = process.env.AZURE_CONTAINER_NAME
 
 const containerClient = blobServiceClient.getContainerClient(containerName)
 
@@ -49,7 +49,7 @@ async function main() {
 	//force file to be (re)created as utf-8
 	await writeFile(filename, '', 'utf8')
 	let stream = fs.createWriteStream(filename, {flags: 'a'})
-	let blobs = await containerClient.listBlobsFlat(options)
+	let blobs = containerClient.listBlobsFlat(options)
 	for await (const blob of blobs) {
 		let name = blob.name
 		if (!name.endsWith('/Thumbs.db')) {
