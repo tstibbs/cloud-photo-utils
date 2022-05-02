@@ -36,8 +36,9 @@ export async function fetchPages(url, startToken) {
 }
 
 function processFilesData(data) {
-	let files = data
-		.filter(item => item != undefined)
+	let entries = data.filter(item => item != undefined)
+	let files = entries
+		.filter(item => item.kind == 'FILE')
 		.map(item => {
 			assert(item.parentMap.FOLDER.length == 1)
 			return {
@@ -47,7 +48,18 @@ function processFilesData(data) {
 				folder: item.parentMap.FOLDER[0]
 			}
 		})
-	return files
+	let folders = entries
+		.filter(item => item.kind == 'FOLDER')
+		.map(item => {
+			return {
+				id: item.id,
+				name: item.name
+			}
+		})
+	return {
+		files,
+		folders
+	}
 }
 
 async function fetchParentFolders(allFolders, ids) {
@@ -113,11 +125,27 @@ export async function listFolderPaths(folder) {
 		`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`,
 		null
 	)
-	let files = processFilesData(filesData)
+	console.log(JSON.stringify(filesData, null, 2))
+	let {files} = processFilesData(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
 	let allFolders = {}
 	await fetchParentFolders(allFolders, parentFolders)
 	calcFolders(allFolders)
 	let paths = calcPaths(allFolders, files)
 	return paths
+}
+
+export async function fetchFolderContents(folder) {
+	let filesData = await fetchPages(`nodes/${folder}/children?resourceVersion=V2`, null)
+	let filesAndFolders = processFilesData(filesData)
+	return filesAndFolders
+}
+
+export async function getRootId() {
+	let results = await fetchPages(`nodes?filters=kind:FOLDER AND isRoot:true`)
+	assert.strictEqual(results.length, 1)
+	let rootResult = results[0]
+	assert.strictEqual(rootResult.kind, 'FOLDER')
+	assert.strictEqual(rootResult.isRoot, true)
+	return rootResult.id
 }

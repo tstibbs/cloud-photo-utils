@@ -7,7 +7,7 @@ import {request, axiosInstance} from './amazon-utils.js'
 async function processOneFile(filePath, albumId) {
 	//search for something with that file name
 	let fileName = filePath.split('/').slice(-1)
-	let response = await request(`/nodes?filters=name:${fileName}`)
+	let response = await request(`/nodes?filters=name:"${encodeURIComponent(fileName)}"`)
 	let files = response.data
 	if (files.length == 1) {
 		let file = files[0]
