@@ -10,10 +10,10 @@ const outputFolder = 'output/amz-md5-lists'
 
 async function list(folderId, folderPath) {
 	let {files, folders} = await fetchFolderContents(folderId)
-	let prefix = ''
-	if (folderPath != null) {
-		prefix = folderPath + '/'
+	if (folderPath == null || folderPath.length == 0) {
+		folderPath = '.'
 	}
+	let prefix = folderPath + '/'
 	let results = files.map(({name, md5}) => ({
 		name: prefix + name,
 		md5
@@ -21,7 +21,7 @@ async function list(folderId, folderPath) {
 	if (folders.length > 0) {
 		for await (let folder of folders) {
 			let {id, name} = folder
-			let fullPath = [folderPath, name].join('/')
+			let fullPath = folderPath + '/' + name
 			let folderResults = await list(id, fullPath)
 			results = results.concat(folderResults)
 		}
@@ -37,7 +37,10 @@ async function listMd5s(folderId, folderPath) {
 
 async function findFolder(parentPath, folderPath) {
 	let rootId = await getRootId()
-	let pathElements = [...parentPath.split('/'), ...folderPath.split('/')]
+	let pathElements = parentPath.split('/')
+	if (folderPath.length > 0) {
+		pathElements.push(...folderPath.split('/'))
+	}
 	let parentId = rootId
 	for (let pathElement of pathElements) {
 		let url = `nodes?filters=kind:FOLDER AND name:"${encodeURIComponent(
@@ -57,6 +60,9 @@ async function writeResults(parentPath, folderPath, results) {
 		recursive: true
 	})
 	let fileName = folderPath.replace(/\//g, '__') // remove the slashes
+	if (fileName.length == 0) {
+		fileName = parentPath.split('/').slice(-1)
+	}
 	await writeFile(`${outputPath}/${fileName}.md5`, results)
 }
 
