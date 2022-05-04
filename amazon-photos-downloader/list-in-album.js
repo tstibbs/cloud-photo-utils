@@ -18,3 +18,5 @@ if (esMain(import.meta)) {
 		console.log(JSON.stringify(paths, null, 2))
 	}
 }
+// note, pipe the output of this program through something like the following to get the actual list of file names:
+// jq --raw-output 'keys[]' | sort

@@ -12,7 +12,7 @@ export const axiosInstance = axios.create({
 		'x-amzn-sessionid': sessionid,
 		cookie: cookie,
 		'user-agent':
-			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
+			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36'
 	}
 })
 
@@ -27,6 +27,10 @@ export async function fetchPages(url, startToken) {
 		requestUrl = `${url}&startToken=${startToken}`
 	}
 	let response = await request(requestUrl)
+	if (typeof response !== 'object') {
+		console.log(response)
+		throw new Error('Unexpected response type')
+	}
 	let data = response.data
 	if (response.nextToken != null) {
 		let response2 = await fetchPages(url, response.nextToken)
@@ -125,7 +129,6 @@ export async function listFolderPaths(folder) {
 		`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`,
 		null
 	)
-	console.log(JSON.stringify(filesData, null, 2))
 	let {files} = processFilesData(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
 	let allFolders = {}
