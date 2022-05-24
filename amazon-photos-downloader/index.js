@@ -19,5 +19,6 @@ export async function download(ids) {
 }
 
 export async function listPaths() {
-	return await listFolderPaths(folder)
+	let files = await listFolderPaths(folder)
+	return Object.fromEntries(files.map(file => [file.name, file.id]))
 }

@@ -39,7 +39,7 @@ export async function fetchPages(url, startToken) {
 	return data
 }
 
-function processFilesData(data) {
+function processFolderContents(data) {
 	let entries = data.filter(item => item != undefined)
 	let files = entries
 		.filter(item => item.kind == 'FILE')
@@ -49,6 +49,7 @@ function processFilesData(data) {
 				id: item.id,
 				name: item.name,
 				md5: item.contentProperties.md5,
+				contentDate: item.contentProperties.contentDate,
 				folder: item.parentMap.FOLDER[0]
 			}
 		})
@@ -113,15 +114,13 @@ function calcFolders(allFolders) {
 function calcPaths(allFolders, files) {
 	allFolders = Object.fromEntries(Object.entries(allFolders).map(([id, folder]) => [id, folder.name]))
 
-	let paths = files.map(file => {
+	files.forEach(file => {
 		let folder = file.folder
 		if (folder in allFolders) {
 			folder = allFolders[folder]
 			file.name = `${folder}/${file.name}`
 		}
-		return [file.name, file.id]
 	})
-	return Object.fromEntries(paths)
 }
 
 export async function listFolderPaths(folder) {
@@ -129,18 +128,18 @@ export async function listFolderPaths(folder) {
 		`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`,
 		null
 	)
-	let {files} = processFilesData(filesData)
+	let {files} = processFolderContents(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
 	let allFolders = {}
 	await fetchParentFolders(allFolders, parentFolders)
 	calcFolders(allFolders)
-	let paths = calcPaths(allFolders, files)
-	return paths
+	calcPaths(allFolders, files)
+	return files
 }
 
 export async function fetchFolderContents(folder) {
 	let filesData = await fetchPages(`nodes/${folder}/children?resourceVersion=V2`, null)
-	let filesAndFolders = processFilesData(filesData)
+	let filesAndFolders = processFolderContents(filesData)
 	return filesAndFolders
 }
 

@@ -14,8 +14,9 @@ if (esMain(import.meta)) {
 		showUsage()
 	} else {
 		let album = args[0]
-		let paths = await listFolderPaths(album)
-		console.log(JSON.stringify(paths, null, 2))
+		let files = await listFolderPaths(album)
+		files = files.map(file => [file.name, file.id, file.contentDate])
+		console.log(JSON.stringify(files, null, 2))
 	}
 }
 // note, pipe the output of this program through something like the following to get the actual list of file names:
