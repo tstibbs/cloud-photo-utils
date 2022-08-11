@@ -18,6 +18,7 @@ export const axiosInstance = axios.create({
 
 export async function request(url, options) {
 	let response = await axiosInstance.get(url, options)
+	console.log(`GET ${url} ... ${response.status}`)
 	return response.data
 }
 
@@ -124,10 +125,7 @@ function calcPaths(allFolders, files) {
 }
 
 export async function listFolderPaths(folder) {
-	let filesData = await fetchPages(
-		`https://www.amazon.co.uk/drive/v1/nodes/${folder}/children?resourceVersion=V2`,
-		null
-	)
+	let filesData = await fetchPages(`nodes/${folder}/children?resourceVersion=V2`, null)
 	let {files} = processFolderContents(filesData)
 	let parentFolders = [...new Set(files.map(file => file.folder))].sort()
 	let allFolders = {}

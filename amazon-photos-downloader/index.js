@@ -8,7 +8,7 @@ const folder = process.env.amazon_folder
 
 export async function download(ids) {
 	let promises = ids.map(id =>
-		request(`https://www.amazon.co.uk/drive/v1/nodes/${id}/contentRedirection`, {
+		request(`nodes/${id}/contentRedirection`, {
 			responseType: 'arraybuffer'
 		})
 	)
