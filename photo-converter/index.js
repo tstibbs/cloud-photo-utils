@@ -4,8 +4,8 @@ import sharp from 'sharp'
 import {buildOverlays, close, init} from '../text-overlay/index.js'
 import {writeExifData} from '../text-overlay/exif.js'
 
-const width = 1920
-const height = 1080
+const width = 3840
+const height = 2160
 
 const margin = 55
 const gap = 15
@@ -44,7 +44,7 @@ async function blend(inputPath, outputPath, referencePath) {
 	let bottomHeight = null
 
 	let compositions = [
-		//first put the resized image over the blured background
+		//first put the resized image over the blurred background
 		{
 			input: foregroundBuffer,
 			blend: 'over'

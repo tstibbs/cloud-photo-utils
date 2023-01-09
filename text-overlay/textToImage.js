@@ -1,7 +1,7 @@
 import text2png from 'text2png'
 
-const dataTextSize = 50
-const locationTextSize = 24
+const dataTextSize = 100
+const locationTextSize = 48
 
 const defaultOptions = {
 	localFontPath: 'text-overlay/tmp/googlesans-regular.ttf',
