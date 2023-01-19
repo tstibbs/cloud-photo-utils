@@ -11,4 +11,4 @@ fi
 dir=$1
 outputFile=$2
 
-exiftool -filename -directory -gpslatitude -gpslongitude -ext JPG -ext JPEG -table --printConv -recurse . | grep -v -P '\t\-\t\-$' | awk '{ print $2 "/" $1 "," $3 "," $4 }' > $outputFile
+exiftool -filename -directory -gpslatitude -gpslongitude -ext JPG -ext JPEG -table --printConv -recurse "$dir" | { grep -v -P '\t\-\t\-$' || [[ $? == 1 ]]; } | awk -F '\t' '{ print $2 "/" $1 "," $3 "," $4 }' > "$outputFile"
