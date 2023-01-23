@@ -1,4 +1,4 @@
-import {resolve} from 'path'
+import {resolve, dirname} from 'path'
 import {readFile, writeFile} from 'fs/promises'
 
 import {groupBy} from 'underscore'
@@ -12,20 +12,33 @@ const files = [
 	//TODO call out to find command
 ]
 
+const parentFolders = files
+	.map(file => resolve(baseDir, dirname(file)))
+	.map(folder => {
+		let baseDirMatches = /^\/mnt\/(\w+)\/(.*)$/.exec(folder)
+		let webFolderName = baseDirMatches == null ? folder : `${baseDirMatches[1]}:/${baseDirMatches[2]}`
+		webFolderName = `file:///${webFolderName}`
+		return webFolderName
+	})
+
 let filePromises = files.map(file => readFile(resolve(baseDir, file), {encoding: 'utf8'}))
 let results = await Promise.all(filePromises)
-let entries = results.map(result => result.split('\n').filter(line => line.length > 0)).flat()
-let allEntriesCount = entries.length
-//some phones set 0/0 at the lat/long if there's no geo info, which isn't helpful, but we'll remove as it's far more likely to be this than that the photo was actually taken at 0/0.
-entries = entries.filter(line => !line.endsWith(',0,0'))
+let entries = results.map(result => result.split('\n').filter(line => line.length > 0))
 //parse csv - TODO use a proper CSV parser
 entries = entries
-	.map(line => line.split(','))
-	.map(values => ({
-		path: values[0],
-		lat: parseFloat(values[1]),
-		lon: parseFloat(values[2])
-	}))
+	.map((fileEntries, i) =>
+		fileEntries
+			.map(line => line.split(','))
+			.map(values => ({
+				path: parentFolders[i] + `/` + values[0],
+				lat: parseFloat(values[1]),
+				lon: parseFloat(values[2])
+			}))
+	)
+	.flat()
+let allEntriesCount = entries.length
+//some phones set 0/0 at the lat/long if there's no geo info, which isn't helpful, but we'll remove as it's far more likely to be this than that the photo was actually taken at 0/0.
+entries = entries.filter(({lat, lon}) => lat != 0 || lon != 0)
 //now remove anything invalid
 entries = entries.filter(({lat, lon}) => lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)
 let invalidEntriesRemoved = allEntriesCount - entries.length
@@ -45,14 +58,10 @@ entries = groupBy(entries, 'loc')
 
 //output to GPX
 
-let baseDirMatches = /^\/mnt\/(\w+)\/(.*)$/.exec(baseDir)
-
-const baseDirForLinks = baseDirMatches == null ? baseDir : `${baseDirMatches[1]}:/${baseDirMatches[2]}`
-
 const wpts = Object.entries(entries)
 	.map(([loc, values]) => {
 		let [lat, lon] = loc.split(',')
-		let links = values.map(({path}) => `<link href="file:///${baseDirForLinks}/${path}"></link>`).join('\n')
+		let links = values.map(({path}) => `<link href="${path}"></link>`).join('\n')
 		return `<wpt lat="${lat}" lon="${lon}">
         <desc>${values.length}</desc>
 		<links>
