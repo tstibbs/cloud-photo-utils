@@ -1,16 +1,32 @@
 import {resolve, dirname} from 'path'
 import {readFile, writeFile} from 'fs/promises'
+import {promisify} from 'node:util'
+import {exec as rawExec} from 'node:child_process'
 
 import {groupBy} from 'underscore'
+
+const exec = promisify(rawExec)
 
 const latRoundDigits = 5
 const lonRoundDigits = 4
 
-const baseDir = ''
+let appArgs = process.argv.slice(2)
+if (appArgs.length != 1) {
+	console.error('Usage: node summarise.js baseDir') //doesn't matter if baseDir ends in slashes or not
+	process.exit(1)
+}
+const baseDir = appArgs[0]
 
-const files = [
-	//TODO call out to find command
-]
+const {stdout, stderr} = await exec('find . -type f -name "*.locations.csv"', {cwd: baseDir})
+if (stderr != null && stderr.trim().length > 0) {
+	console.log('stderr:')
+	console.log(stderr)
+}
+
+const files = stdout
+	.split('\n')
+	.filter(line => line.length > 0)
+	.map(line => line.trim())
 
 const parentFolders = files
 	.map(file => resolve(baseDir, dirname(file)))
