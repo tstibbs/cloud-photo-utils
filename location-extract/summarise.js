@@ -1,11 +1,11 @@
 import {resolve, dirname} from 'path'
 import {readFile, writeFile} from 'fs/promises'
 import {promisify} from 'node:util'
-import {exec as rawExec} from 'node:child_process'
+import {execFile as rawExecFile} from 'node:child_process'
 
 import {groupBy} from 'underscore'
 
-const exec = promisify(rawExec)
+const execFile = promisify(rawExecFile)
 
 const latRoundDigits = 5
 const lonRoundDigits = 4
@@ -17,7 +17,7 @@ if (appArgs.length != 1) {
 }
 const baseDir = appArgs[0]
 
-const {stdout, stderr} = await exec('find . -type f -name "*.locations.csv"', {cwd: baseDir})
+const {stdout, stderr} = await execFile('find', ['.', '-type', 'f', '-name', '*.locations.csv'], {cwd: baseDir})
 if (stderr != null && stderr.trim().length > 0) {
 	console.log('stderr:')
 	console.log(stderr)
