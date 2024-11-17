@@ -1,8 +1,11 @@
+import {promisify} from 'node:util'
 import axios from 'axios'
 import {readFile, writeFile, fileExists} from '../utils.js'
+const sleep = promisify(setTimeout)
 
 const useCache = process.env.use_cache == 'true'
 const cachePath = 'tmp/geocodingCache.json'
+let lastRequest = Date.now()
 
 const element1Fields = [
 	'tourism',
@@ -42,8 +45,16 @@ async function close() {
 }
 
 async function fetchDescriptor(lat, lng) {
+	if (Date.now() - lastRequest < 1200) {
+		await sleep(1200)
+	}
+	lastRequest = Date.now()
 	let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`
-	let response = await axios.get(url)
+	let response = await axios.get(url, {
+		headers: {
+			'User-Agent': 'https://github.com/tstibbs/cloud-photo-utils'
+		}
+	})
 	let data = response.data
 	let address = data.address
 	let chosenFields = chooseFields(address)
