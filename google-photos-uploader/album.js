@@ -129,6 +129,7 @@ async function deletePhotos(referencePaths) {
 		console.log(JSON.stringify(fullPhotosList))
 	}
 	if (mediaItemIds.length > 0) {
+		console.log(JSON.stringify(mediaItemIds, null, 2))
 		const chunks = _.chunk(mediaItemIds, 50)
 		let oauthToken = await getOauthToken()
 		let url = `https://photoslibrary.googleapis.com/v1/albums/${deleteAlbumId}:batchAddMediaItems`

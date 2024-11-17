@@ -78,6 +78,7 @@ async function run() {
 	console.log(JSON.stringify(allPaths, null, 2))
 	console.log(allPaths.length)
 	for (const [referencePath, {inputPath, outputPath}] of allPaths) {
+		console.log({referencePath, inputPath})
 		await convert(referencePath, inputPath, outputPath)
 	}
 	allPaths = allPaths.map(([referencePath, {outputPath}]) => [referencePath, outputPath])

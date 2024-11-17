@@ -10,7 +10,7 @@
 		"es-main": "^1.0.2",
 		"exiftool-vendored": "^14.3.0",
 		"fs-readdir-recursive": "^1.1.0",
-		"googleapis": "^61.0.0",
+		"googleapis": "^137.1.0",
 		"request": "^2.88.2",
 		"sharp": "^0.26.2",
 		"text2png": "^2.3.0",
