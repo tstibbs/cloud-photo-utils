@@ -80,7 +80,7 @@ console.log(`${allEntriesCount} entries, filtered to ${filteredEntriescount}, su
 const wpts = Object.entries(entries)
 	.map(([loc, values]) => {
 		let [lat, lon] = loc.split(',')
-		let links = values.map(({path}) => `<link href="${path}"></link>`).join('\n')
+		let links = values.map(({path}) => `<link href="${path}"><type>image/jpeg</type></link>`).join('\n')
 		return `<wpt lat="${lat}" lon="${lon}">
         <desc>${values.length}</desc>
 		${links}
