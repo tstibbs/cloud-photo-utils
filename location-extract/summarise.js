@@ -12,11 +12,13 @@ const latRoundDigits = 5
 const lonRoundDigits = 4
 
 let appArgs = process.argv.slice(2)
-if (appArgs.length != 1) {
-	console.error('Usage: node summarise.js baseDir') //doesn't matter if baseDir ends in a slash or not
+if (appArgs.length != 2) {
+	console.error('Usage: node summarise.js baseDir urlBase')
+	//doesn't matter if baseDir ends in a slash or not
+	//urlBase must end in a slash
 	process.exit(1)
 }
-const baseDir = appArgs[0]
+const [baseDir, urlBase] = appArgs
 
 const {stdout, stderr} = await execFile('find', ['.', '-type', 'f', '-name', `*${locationsFileSuffix}`], {cwd: baseDir})
 if (stderr != null && stderr.trim().length > 0) {
@@ -31,11 +33,7 @@ const files = stdout
 
 const parentFolders = files.map(file => {
 	file = file.endsWith(locationsFileSuffix) ? file.slice(0, -locationsFileSuffix.length) : file
-	const parentFolder = resolve(baseDir, file)
-	let baseDirMatches = /^\/mnt\/(\w+)\/(.*)$/.exec(parentFolder)
-	let webFolderName = baseDirMatches == null ? parentFolder : `${baseDirMatches[1]}:/${baseDirMatches[2]}`
-	webFolderName = `file:///${webFolderName}`
-	return webFolderName
+	return new URL(file + '/', urlBase)
 })
 
 function trimCurrentDir(filePath) {
@@ -51,7 +49,7 @@ entries = entries
 		fileEntries
 			.map(line => line.split(','))
 			.map(([file, lat, lon]) => ({
-				path: parentFolders[i] + `/` + trimCurrentDir(file),
+				path: new URL(trimCurrentDir(file), parentFolders[i]).toString(),
 				lat: parseFloat(lat),
 				lon: parseFloat(lon)
 			}))
