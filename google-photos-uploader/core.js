@@ -10,7 +10,11 @@ const google_project_id = process.env.google_project_id
 const google_client_secret = process.env.google_client_secret
 
 //=====================================================
-const SCOPES = ['https://www.googleapis.com/auth/photoslibrary']
+const SCOPES = [
+	'https://www.googleapis.com/auth/photoslibrary.appendonly',
+	'https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata',
+	'https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata'
+]
 
 const credentials = {
 	installed: {
